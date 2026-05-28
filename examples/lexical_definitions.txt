@@ -1,0 +1,18 @@
+# Exemplo de definicoes lexicas do enunciado
+id: [a-zA-Z]([a-zA-Z] | [0-9])*
+num: [1-9]([0-9])* | 0
+espaco: ([ ] | [\t] | [\n])+
+soma: \+
+menos: -
+mult: \*
+div: /
+atrib: =
+igual: ==
+menor: <
+maior: >
+abre_paren: \(
+fecha_paren: \)
+comentario_linha: //(a | b | c | [0-9] | [ ])*
+verdadeiro: true
+falso: false
+epsilon_teste: &
