@@ -5,10 +5,12 @@ class ActivityFlowTest(unittest.TestCase):
     def test_person_1_flow(self) -> None:
         from tests.test_finite_automaton import FiniteAutomatonTest
         from tests.test_regex_parser import RegexParserTest
+        from tests.test_regex_to_dfa import RegexToDfaTest
 
         ordered_cases = [
             RegexParserTest,
             FiniteAutomatonTest,
+            RegexToDfaTest,
         ]
 
         result = unittest.TestResult()

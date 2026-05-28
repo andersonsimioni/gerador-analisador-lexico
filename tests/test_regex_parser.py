@@ -90,30 +90,30 @@ class RegexParserTest(unittest.TestCase):
             [
                 "id",
                 "num",
-                "espaco",
-                "soma",
-                "menos",
+                "whitespace",
+                "plus",
+                "minus",
                 "mult",
                 "div",
-                "atrib",
-                "igual",
-                "menor",
-                "maior",
-                "abre_paren",
-                "fecha_paren",
-                "comentario_linha",
-                "verdadeiro",
-                "falso",
-                "epsilon_teste",
+                "assign",
+                "equal",
+                "less",
+                "greater",
+                "open_paren",
+                "close_paren",
+                "line_comment",
+                "true_keyword",
+                "false_keyword",
+                "epsilon_test",
             ],
         )
 
     def test_parse_escaped_regex_operators_as_literals(self) -> None:
         text = """
-        soma: \\+
+        plus: \\+
         mult: \\*
-        abre_paren: \\(
-        fecha_paren: \\)
+        open_paren: \\(
+        close_paren: \\)
         """
 
         definitions = parse_definitions_text(text)
@@ -131,24 +131,24 @@ class RegexParserTest(unittest.TestCase):
     def test_parse_common_language_tokens(self) -> None:
         text = """
         id: [a-zA-Z]([a-zA-Z] | [0-9])*
-        inteiro: [1-9]([0-9])* | 0
-        espaco: ([ ] | [\\t] | [\\n])+
-        igual: ==
-        comentario_linha: //(a | b | [0-9] | [ ])*
-        epsilon_teste: &
+        integer: [1-9]([0-9])* | 0
+        whitespace: ([ ] | [\\t] | [\\n])+
+        equal: ==
+        line_comment: //(a | b | [0-9] | [ ])*
+        epsilon_test: &
         """
 
         definitions = parse_definitions_text(text)
         tokens_by_name = {definition.name: definition.tokens for definition in definitions}
 
-        self.assertEqual(tokens_by_name["espaco"][-1].kind, "PLUS")
-        self.assertEqual([token.kind for token in tokens_by_name["igual"]], ["LITERAL", "CONCAT", "LITERAL"])
-        self.assertEqual([token.value for token in tokens_by_name["igual"]], ["=", "", "="])
-        self.assertEqual(tokens_by_name["epsilon_teste"][0].kind, "EPSILON")
+        self.assertEqual(tokens_by_name["whitespace"][-1].kind, "PLUS")
+        self.assertEqual([token.kind for token in tokens_by_name["equal"]], ["LITERAL", "CONCAT", "LITERAL"])
+        self.assertEqual([token.value for token in tokens_by_name["equal"]], ["=", "", "="])
+        self.assertEqual(tokens_by_name["epsilon_test"][0].kind, "EPSILON")
 
     def test_ignore_empty_lines_and_comments(self) -> None:
         text = """
-        # comentario
+        # comment
 
         er1: a?(a | b)+
         """

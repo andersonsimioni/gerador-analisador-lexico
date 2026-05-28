@@ -20,7 +20,7 @@ def main() -> None:
     samples = ["0", "1", "10", "101", "111", "1000"]
 
     for sample in samples:
-        result = "aceita" if automaton.accepts(sample) else "rejeita"
+        result = "accepted" if automaton.accepts(sample) else "rejected"
         print(f"{sample}: {result}")
 
 

@@ -90,7 +90,7 @@ def tokenize_expression(expression: str, line_number: int = 1) -> list[RegexToke
 
         if char == "\\":
             if index + 1 >= len(expression):
-                raise ValueError(f"Linha {line_number}: escape incompleto.")
+                raise ValueError(f"Line {line_number}: incomplete escape.")
             tokens.append(RegexToken("LITERAL", expression[index + 1]))
             index += 2
             continue
@@ -117,18 +117,41 @@ def build_syntax_tree(
     return root, parser.positions, followpos
 
 
+def with_end_marker(definition: RegexDefinition, marker: str = "#") -> RegexDefinition:
+    positions = dict(definition.positions)
+    marker_position = max(positions, default=0) + 1
+    positions[marker_position] = marker
+
+    root = RegexNode(
+        "CONCAT",
+        left=definition.root,
+        right=RegexNode("LITERAL", marker, position=marker_position),
+    )
+    followpos = {position: set() for position in positions}
+    root = _annotate(root, followpos)
+
+    return RegexDefinition(
+        name=definition.name,
+        expression=f"({definition.expression}){marker}",
+        tokens=definition.tokens + [RegexToken("CONCAT", ""), RegexToken("LITERAL", marker)],
+        root=root,
+        positions=positions,
+        followpos=followpos,
+    )
+
+
 def _split_definition(line: str, line_number: int) -> tuple[str, str]:
     if ":" not in line:
-        raise ValueError(f"Linha {line_number}: definicao sem ':'.")
+        raise ValueError(f"Line {line_number}: definition missing ':'.")
 
     name, expression = line.split(":", 1)
     name = name.strip()
     expression = expression.strip()
 
     if not name:
-        raise ValueError(f"Linha {line_number}: nome da definicao vazio.")
+        raise ValueError(f"Line {line_number}: empty definition name.")
     if not expression:
-        raise ValueError(f"Linha {line_number}: expressao regular vazia.")
+        raise ValueError(f"Line {line_number}: empty regular expression.")
 
     return name, expression
 
@@ -136,9 +159,9 @@ def _split_definition(line: str, line_number: int) -> tuple[str, str]:
 def _read_char_class(expression: str, start: int, line_number: int) -> tuple[str, int]:
     end = expression.find("]", start + 1)
     if end == -1:
-        raise ValueError(f"Linha {line_number}: grupo '[' sem fechamento ']'.")
+        raise ValueError(f"Line {line_number}: '[' group missing closing ']'.")
     if end == start + 1:
-        raise ValueError(f"Linha {line_number}: grupo de caracteres vazio.")
+        raise ValueError(f"Line {line_number}: empty character group.")
 
     return expression[start : end + 1], end + 1
 
@@ -172,12 +195,12 @@ class _SyntaxTreeParser:
 
     def parse(self) -> RegexNode:
         if not self.tokens:
-            raise ValueError(f"Linha {self.line_number}: expressao regular vazia.")
+            raise ValueError(f"Line {self.line_number}: empty regular expression.")
 
         root = self._parse_union()
         if self._current() is not None:
             token = self._current()
-            raise ValueError(f"Linha {self.line_number}: token inesperado '{token.value}'.")
+            raise ValueError(f"Line {self.line_number}: unexpected token '{token.value}'.")
         return root
 
     def _parse_union(self) -> RegexNode:
@@ -208,12 +231,12 @@ class _SyntaxTreeParser:
     def _parse_atom(self) -> RegexNode:
         token = self._current()
         if token is None:
-            raise ValueError(f"Linha {self.line_number}: expressao incompleta.")
+            raise ValueError(f"Line {self.line_number}: incomplete expression.")
 
         if self._accept("LPAREN"):
             node = self._parse_union()
             if not self._accept("RPAREN"):
-                raise ValueError(f"Linha {self.line_number}: parenteses sem fechamento.")
+                raise ValueError(f"Line {self.line_number}: missing closing parenthesis.")
             return node
 
         if token.kind in {"LITERAL", "CHAR_CLASS"}:
@@ -227,7 +250,7 @@ class _SyntaxTreeParser:
             self.index += 1
             return RegexNode("EPSILON", token.value)
 
-        raise ValueError(f"Linha {self.line_number}: token inesperado '{token.value}'.")
+        raise ValueError(f"Line {self.line_number}: unexpected token '{token.value}'.")
 
     def _accept(self, kind: str) -> bool:
         token = self._current()
@@ -299,10 +322,10 @@ def _annotate(node: RegexNode, followpos: dict[int, set[int]]) -> RegexNode:
             lastpos=left.lastpos | right.lastpos if right.nullable else right.lastpos,
         )
 
-    raise ValueError(f"Tipo de no desconhecido: {node.kind}")
+    raise ValueError(f"Unknown node type: {node.kind}")
 
 
 def _required(node: RegexNode | None) -> RegexNode:
     if node is None:
-        raise ValueError("Arvore sintatica invalida.")
+        raise ValueError("Invalid syntax tree.")
     return node

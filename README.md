@@ -75,11 +75,13 @@ Ela contem:
 - `State`: representa um estado do automato.
 - `Transition`: representa uma transicao entre estados.
 - `FiniteAutomaton`: representa um AFD ou AFND simples, com suporte a transicoes epsilon usando `&`.
+- `build_dfa_from_regex`: gera um AFD direto a partir da arvore sintatica da expressao regular pelo algoritmo do Aho.
 
 Exemplo de execucao:
 
 ```powershell
 python -m examples.simple_automaton
+python -m examples.build_dfa
 ```
 
 ## Parser de Expressoes Regulares
@@ -104,6 +106,8 @@ E transforma cada linha em uma `RegexDefinition`, contendo:
 
 A concatenacao e implicita no arquivo de entrada, mas o parser insere um token interno `CONCAT` para montar a arvore.
 
+O gerador de AFD acrescenta internamente o marcador final `#`, usa `firstpos` como estado inicial e cria as transicoes a partir de `followpos`.
+
 Exemplo de execucao:
 
 ```powershell
@@ -118,4 +122,10 @@ Para rodar os testes atuais:
 
 ```powershell
 python -m unittest discover -s tests
+```
+
+Para rodar com saida detalhada, mostrando cada teste e seu resultado:
+
+```powershell
+python scripts/run_tests.py
 ```

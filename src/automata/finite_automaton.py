@@ -62,7 +62,7 @@ class FiniteAutomaton:
         return {
             transition.target
             for transition in self.transitions
-            if transition.source in state_names and transition.symbol == symbol
+            if transition.source in state_names and _symbol_matches(transition.symbol, symbol)
         }
 
     def epsilon_closure(self, state_names: set[str]) -> set[str]:
@@ -118,6 +118,46 @@ class FiniteAutomaton:
 
     def _validate_ready(self) -> None:
         if self.initial_state is None:
-            raise ValueError("Automato sem estado inicial.")
+            raise ValueError("Automaton has no initial state.")
         if self.initial_state not in self.states:
-            raise ValueError(f"Estado inicial desconhecido: {self.initial_state}")
+            raise ValueError(f"Unknown initial state: {self.initial_state}")
+
+
+def _symbol_matches(expected: str, actual: str) -> bool:
+    if expected == actual:
+        return True
+    if len(actual) == 1 and expected.startswith("[") and expected.endswith("]"):
+        return _matches_char_class(expected, actual)
+    return False
+
+
+def _matches_char_class(char_class: str, char: str) -> bool:
+    content = char_class[1:-1]
+    index = 0
+
+    while index < len(content):
+        start, index = _read_class_char(content, index)
+        if index + 1 < len(content) and content[index] == "-":
+            end, index = _read_class_char(content, index + 1)
+            if start <= char <= end:
+                return True
+            continue
+        if char == start:
+            return True
+
+    return False
+
+
+def _read_class_char(content: str, index: int) -> tuple[str, int]:
+    if content[index] != "\\":
+        return content[index], index + 1
+
+    if index + 1 >= len(content):
+        return "\\", index + 1
+
+    escaped = content[index + 1]
+    if escaped == "t":
+        return "\t", index + 2
+    if escaped == "n":
+        return "\n", index + 2
+    return escaped, index + 2
