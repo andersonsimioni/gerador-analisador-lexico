@@ -13,7 +13,7 @@ def build_dfa_from_regex(definition: RegexDefinition) -> FiniteAutomaton:
     automaton = FiniteAutomaton(definition.name)
     state_names: dict[frozenset[int], str] = {}
     pending: list[frozenset[int]] = []
-
+    
     def add_state(positions: frozenset[int]) -> str:
         if positions not in state_names:
             name = f"S{len(state_names)}"
@@ -39,7 +39,8 @@ def build_dfa_from_regex(definition: RegexDefinition) -> FiniteAutomaton:
 
             target_state = add_state(frozenset(target_positions))
             automaton.add_transition(current_state, symbol, target_state)
-
+    
+    automaton.minimization()
     return automaton
 
 

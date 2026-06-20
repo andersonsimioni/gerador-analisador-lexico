@@ -132,6 +132,52 @@ class FiniteAutomatonTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             automaton.accepts("")
 
+    def test_minimization_classic_dfa(self) -> None:
+        automaton = FiniteAutomaton()
 
+        automaton.add_state("A", initial=True, final=True)
+        automaton.add_state("B")
+        automaton.add_state("C")
+        automaton.add_state("D", final=True)
+        automaton.add_state("E")
+        automaton.add_state("F")
+
+        automaton.add_transition("A", "0", "D")
+        automaton.add_transition("A", "1", "B")
+
+        automaton.add_transition("B", "0", "F")
+        automaton.add_transition("B", "1", "E")
+
+        automaton.add_transition("C", "0", "C")
+        automaton.add_transition("C", "1", "D")
+
+        automaton.add_transition("D", "0", "D")
+        automaton.add_transition("D", "1", "F")
+
+        automaton.add_transition("E", "0", "E")
+        automaton.add_transition("E", "1", "A")
+
+        automaton.add_transition("F", "0", "B")
+        automaton.add_transition("F", "1", "C")
+
+        automaton.minimization()
+
+        grupos_obtidos = {
+            frozenset(estado) for estado in automaton.states.keys()
+        }
+
+        grupos_esperados = {
+            frozenset({"A", "D"}),
+            frozenset({"B", "F"}),
+            frozenset({"C", "E"}),
+        }
+
+        self.assertEqual(grupos_obtidos, grupos_esperados)
+
+        print("\n✓ Minimização correta!")
+        print("Estados restantes:")
+        for estado in automaton.states:
+            print(f"  {estado}")
+            
 if __name__ == "__main__":
     unittest.main()
