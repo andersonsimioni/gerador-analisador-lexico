@@ -14,19 +14,19 @@ class RegexParserTest(unittest.TestCase):
         definitions = parse_definitions_text(text)
 
         self.assertEqual([definition.name for definition in definitions], ["id", "num"])
-        self.assertEqual(definitions[0].tokens[0].kind, "CHAR_CLASS")
-        self.assertEqual(definitions[0].tokens[1].kind, "CONCAT")
-        self.assertEqual(definitions[0].tokens[2].kind, "LPAREN")
-        self.assertEqual(definitions[0].tokens[-1].kind, "STAR")
-        self.assertEqual(definitions[1].tokens[-1].value, "0")
+        self.assertEqual(definitions[0].parts[0].kind, "CHAR_CLASS")
+        self.assertEqual(definitions[0].parts[1].kind, "CONCAT")
+        self.assertEqual(definitions[0].parts[2].kind, "LPAREN")
+        self.assertEqual(definitions[0].parts[-1].kind, "STAR")
+        self.assertEqual(definitions[1].parts[-1].value, "0")
 
     def test_insert_concat_tokens_between_adjacent_terms(self) -> None:
         definitions = parse_definitions_text("id: ab(c | d)*")
 
-        token_pairs = [(token.kind, token.value) for token in definitions[0].tokens]
+        part_pairs = [(part.kind, part.value) for part in definitions[0].parts]
 
         self.assertEqual(
-            token_pairs,
+            part_pairs,
             [
                 ("LITERAL", "a"),
                 ("CONCAT", ""),
@@ -118,17 +118,17 @@ class RegexParserTest(unittest.TestCase):
 
         definitions = parse_definitions_text(text)
 
-        token_pairs = [
-            [(token.kind, token.value) for token in definition.tokens]
+        part_pairs = [
+            [(part.kind, part.value) for part in definition.parts]
             for definition in definitions
         ]
 
-        self.assertEqual(token_pairs[0], [("LITERAL", "+")])
-        self.assertEqual(token_pairs[1], [("LITERAL", "*")])
-        self.assertEqual(token_pairs[2], [("LITERAL", "(")])
-        self.assertEqual(token_pairs[3], [("LITERAL", ")")])
+        self.assertEqual(part_pairs[0], [("LITERAL", "+")])
+        self.assertEqual(part_pairs[1], [("LITERAL", "*")])
+        self.assertEqual(part_pairs[2], [("LITERAL", "(")])
+        self.assertEqual(part_pairs[3], [("LITERAL", ")")])
 
-    def test_parse_common_language_tokens(self) -> None:
+    def test_parse_common_language_parts(self) -> None:
         text = """
         id: [a-zA-Z]([a-zA-Z] | [0-9])*
         integer: [1-9]([0-9])* | 0
@@ -139,12 +139,12 @@ class RegexParserTest(unittest.TestCase):
         """
 
         definitions = parse_definitions_text(text)
-        tokens_by_name = {definition.name: definition.tokens for definition in definitions}
+        parts_by_name = {definition.name: definition.parts for definition in definitions}
 
-        self.assertEqual(tokens_by_name["whitespace"][-1].kind, "PLUS")
-        self.assertEqual([token.kind for token in tokens_by_name["equal"]], ["LITERAL", "CONCAT", "LITERAL"])
-        self.assertEqual([token.value for token in tokens_by_name["equal"]], ["=", "", "="])
-        self.assertEqual(tokens_by_name["epsilon_test"][0].kind, "EPSILON")
+        self.assertEqual(parts_by_name["whitespace"][-1].kind, "PLUS")
+        self.assertEqual([part.kind for part in parts_by_name["equal"]], ["LITERAL", "CONCAT", "LITERAL"])
+        self.assertEqual([part.value for part in parts_by_name["equal"]], ["=", "", "="])
+        self.assertEqual(parts_by_name["epsilon_test"][0].kind, "EPSILON")
 
     def test_ignore_empty_lines_and_comments(self) -> None:
         text = """

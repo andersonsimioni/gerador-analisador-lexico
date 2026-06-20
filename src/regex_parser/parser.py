@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class RegexToken:
+class RegexPart:
     kind: str
     value: str
 
@@ -26,7 +26,7 @@ class RegexNode:
 class RegexDefinition:
     name: str
     expression: str
-    tokens: list[RegexToken]
+    parts: list[RegexPart]
     root: RegexNode
     positions: dict[int, str]
     followpos: dict[int, set[int]]
@@ -56,13 +56,13 @@ def parse_definitions_text(text: str) -> list[RegexDefinition]:
             continue
 
         name, expression = _split_definition(line, line_number)
-        tokens = _add_concat_tokens(tokenize_expression(expression, line_number))
-        root, positions, followpos = build_syntax_tree(tokens, line_number)
+        parts = _add_concat_parts(tokenize_expression(expression, line_number))
+        root, positions, followpos = build_syntax_tree(parts, line_number)
         definitions.append(
             RegexDefinition(
                 name=name,
                 expression=expression,
-                tokens=tokens,
+                parts=parts,
                 root=root,
                 positions=positions,
                 followpos=followpos,
@@ -72,8 +72,8 @@ def parse_definitions_text(text: str) -> list[RegexDefinition]:
     return definitions
 
 
-def tokenize_expression(expression: str, line_number: int = 1) -> list[RegexToken]:
-    tokens: list[RegexToken] = []
+def tokenize_expression(expression: str, line_number: int = 1) -> list[RegexPart]:
+    parts: list[RegexPart] = []
     index = 0
 
     while index < len(expression):
@@ -85,32 +85,32 @@ def tokenize_expression(expression: str, line_number: int = 1) -> list[RegexToke
 
         if char == "[":
             value, index = _read_char_class(expression, index, line_number)
-            tokens.append(RegexToken("CHAR_CLASS", value))
+            parts.append(RegexPart("CHAR_CLASS", value))
             continue
 
         if char == "\\":
             if index + 1 >= len(expression):
                 raise ValueError(f"Line {line_number}: incomplete escape.")
-            tokens.append(RegexToken("LITERAL", expression[index + 1]))
+            parts.append(RegexPart("LITERAL", expression[index + 1]))
             index += 2
             continue
 
         if char in OPERATORS:
-            tokens.append(RegexToken(OPERATORS[char], char))
+            parts.append(RegexPart(OPERATORS[char], char))
             index += 1
             continue
 
-        tokens.append(RegexToken("LITERAL", char))
+        parts.append(RegexPart("LITERAL", char))
         index += 1
 
-    return tokens
+    return parts
 
 
 def build_syntax_tree(
-    tokens: list[RegexToken],
+    parts: list[RegexPart],
     line_number: int = 1,
 ) -> tuple[RegexNode, dict[int, str], dict[int, set[int]]]:
-    parser = _SyntaxTreeParser(tokens, line_number)
+    parser = _SyntaxTreeParser(parts, line_number)
     root = parser.parse()
     followpos = {position: set() for position in parser.positions}
     root = _annotate(root, followpos)
@@ -133,7 +133,7 @@ def with_end_marker(definition: RegexDefinition, marker: str = "#") -> RegexDefi
     return RegexDefinition(
         name=definition.name,
         expression=f"({definition.expression}){marker}",
-        tokens=definition.tokens + [RegexToken("CONCAT", ""), RegexToken("LITERAL", marker)],
+        parts=definition.parts + [RegexPart("CONCAT", ""), RegexPart("LITERAL", marker)],
         root=root,
         positions=positions,
         followpos=followpos,
@@ -166,41 +166,63 @@ def _read_char_class(expression: str, start: int, line_number: int) -> tuple[str
     return expression[start : end + 1], end + 1
 
 
-def _add_concat_tokens(tokens: list[RegexToken]) -> list[RegexToken]:
-    if not tokens:
+def _add_concat_parts(parts: list[RegexPart]) -> list[RegexPart]:
+    if not parts:
         return []
 
-    result = [tokens[0]]
-    for previous, current in zip(tokens, tokens[1:]):
+    result = [parts[0]]
+    for previous, current in zip(parts, parts[1:]):
         if _needs_concat(previous, current):
-            result.append(RegexToken("CONCAT", ""))
+            result.append(RegexPart("CONCAT", ""))
         result.append(current)
 
     return result
 
 
-def _needs_concat(previous: RegexToken, current: RegexToken) -> bool:
+def _needs_concat(previous: RegexPart, current: RegexPart) -> bool:
     left = previous.kind in {"LITERAL", "CHAR_CLASS", "EPSILON", "RPAREN", "STAR", "PLUS", "OPTIONAL"}
     right = current.kind in {"LITERAL", "CHAR_CLASS", "EPSILON", "LPAREN"}
     return left and right
 
 
+"""_summary_
+SYNTAX TREE PARSER RULES:
+The parser uses recursive descent.
+Each method handles one precedence level.
+
+PRECEDENCE, FROM LOWEST TO HIGHEST:
+1. UNION:       A | B
+2. CONCAT:      AB, inserted internally as CONCAT
+3. POSTFIX:     A*, A+, A?
+4. ATOM:        a, [a-z], &, (A)
+
+METHODS:
+parse:          starts parsing and checks if no part is left
+_parse_union:   handles |
+_parse_concat:  handles internal CONCAT
+_parse_postfix: handles *, + and ?
+_parse_atom:    handles literals, char classes, epsilon and parentheses
+
+PARENTHESES:
+Parentheses do not become tree nodes.
+They only force a subexpression to be parsed first.
+"""
 class _SyntaxTreeParser:
-    def __init__(self, tokens: list[RegexToken], line_number: int) -> None:
-        self.tokens = tokens
+    def __init__(self, parts: list[RegexPart], line_number: int) -> None:
+        self.parts = parts
         self.line_number = line_number
         self.index = 0
         self.next_position = 1
         self.positions: dict[int, str] = {}
 
     def parse(self) -> RegexNode:
-        if not self.tokens:
+        if not self.parts:
             raise ValueError(f"Line {self.line_number}: empty regular expression.")
 
         root = self._parse_union()
         if self._current() is not None:
-            token = self._current()
-            raise ValueError(f"Line {self.line_number}: unexpected token '{token.value}'.")
+            part = self._current()
+            raise ValueError(f"Line {self.line_number}: unexpected regex part '{part.value}'.")
         return root
 
     def _parse_union(self) -> RegexNode:
@@ -229,8 +251,8 @@ class _SyntaxTreeParser:
                 return node
 
     def _parse_atom(self) -> RegexNode:
-        token = self._current()
-        if token is None:
+        part = self._current()
+        if part is None:
             raise ValueError(f"Line {self.line_number}: incomplete expression.")
 
         if self._accept("LPAREN"):
@@ -239,32 +261,78 @@ class _SyntaxTreeParser:
                 raise ValueError(f"Line {self.line_number}: missing closing parenthesis.")
             return node
 
-        if token.kind in {"LITERAL", "CHAR_CLASS"}:
+        if part.kind in {"LITERAL", "CHAR_CLASS"}:
             self.index += 1
             position = self.next_position
             self.next_position += 1
-            self.positions[position] = token.value
-            return RegexNode(token.kind, token.value, position=position)
+            self.positions[position] = part.value
+            return RegexNode(part.kind, part.value, position=position)
 
-        if token.kind == "EPSILON":
+        if part.kind == "EPSILON":
             self.index += 1
-            return RegexNode("EPSILON", token.value)
+            return RegexNode("EPSILON", part.value)
 
-        raise ValueError(f"Line {self.line_number}: unexpected token '{token.value}'.")
+        raise ValueError(f"Line {self.line_number}: unexpected regex part '{part.value}'.")
 
     def _accept(self, kind: str) -> bool:
-        token = self._current()
-        if token is not None and token.kind == kind:
+        part = self._current()
+        if part is not None and part.kind == kind:
             self.index += 1
             return True
         return False
 
-    def _current(self) -> RegexToken | None:
-        if self.index >= len(self.tokens):
+    def _current(self) -> RegexPart | None:
+        if self.index >= len(self.parts):
             return None
-        return self.tokens[self.index]
+        return self.parts[self.index]
 
 
+"""_summary_
+FIRST/LAST/NULLABLE RULES:
+LEAF:
+    nullable = False
+    firstpos = {position}
+    lastpos = {position}
+
+EPSILON:
+    nullable = True
+    firstpos = {}
+    lastpos = {}
+
+UNION:
+    nullable = nullable(left) or nullable(right)
+    firstpos = firstpos(left) union firstpos(right)
+    lastpos = lastpos(left) union lastpos(right)
+
+CONCAT:
+    nullable = nullable(left) and nullable(right)
+    firstpos = firstpos(left) union firstpos(right), if nullable(left)
+    firstpos = firstpos(left), otherwise
+    lastpos = lastpos(left) union lastpos(right), if nullable(right)
+    lastpos = lastpos(right), otherwise
+
+STAR:
+    nullable = True
+    firstpos = firstpos(child)
+    lastpos = lastpos(child)
+
+PLUS:
+    nullable = nullable(child)
+    firstpos = firstpos(child)
+    lastpos = lastpos(child)
+
+OPTIONAL:
+    nullable = True
+    firstpos = firstpos(child)
+    lastpos = lastpos(child)
+
+
+--------------
+FOLLOW RULES: 
+    CONCAT: followpos[lastpos(left)] += firstpos(right)
+    STAR:   followpos[lastpos(child)] += firstpos(child)
+    PLUS:   followpos[lastpos(child)] += firstpos(child)
+"""
 def _annotate(node: RegexNode, followpos: dict[int, set[int]]) -> RegexNode:
     if node.kind in {"LITERAL", "CHAR_CLASS"}:
         assert node.position is not None

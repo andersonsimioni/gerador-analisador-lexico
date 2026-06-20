@@ -99,12 +99,12 @@ E transforma cada linha em uma `RegexDefinition`, contendo:
 
 - `name`: nome do padrao.
 - `expression`: expressao regular original.
-- `tokens`: lista simples de tokens internos da expressao.
+- `parts`: lista simples de partes internas da expressao.
 - `root`: arvore sintatica da expressao regular.
 - `positions`: simbolos associados as posicoes da arvore.
 - `followpos`: relacao calculada para a construcao do AFD pelo algoritmo do Aho.
 
-A concatenacao e implicita no arquivo de entrada, mas o parser insere um token interno `CONCAT` para montar a arvore.
+A concatenacao e implicita no arquivo de entrada, mas o parser insere uma parte interna `CONCAT` para montar a arvore.
 
 O gerador de AFD acrescenta internamente o marcador final `#`, usa `firstpos` como estado inicial e cria as transicoes a partir de `followpos`.
 

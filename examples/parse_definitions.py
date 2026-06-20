@@ -6,7 +6,7 @@ def main() -> None:
 
     for definition in definitions:
         print(f"{definition.name}: {definition.expression}")
-        print("tokens:", [(token.kind, token.value) for token in definition.tokens])
+        print("parts:", [(part.kind, part.value) for part in definition.parts])
         print("root:", definition.root.kind)
         print("nullable:", definition.root.nullable)
         print("firstpos:", sorted(definition.root.firstpos))
