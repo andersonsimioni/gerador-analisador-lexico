@@ -113,7 +113,7 @@ class RegexToDfaTest(unittest.TestCase):
         self.assertFalse(automaton.accepts("b"))
 
     def test_build_dfa_for_plus_and_optional(self) -> None:
-        definition = parse_definitions_text("token: a?b+")[0]
+        definition = parse_definitions_text("repeat_b: a?b+")[0]
         automaton = build_dfa_from_regex(definition)
 
         self.assertTrue(automaton.accepts("b"))
@@ -172,7 +172,7 @@ class RegexToDfaTest(unittest.TestCase):
             "word: ab",
             "letter: a | b",
             "many_a: a*",
-            "token: a?b+",
+            "repeat_b: a?b+",
             "id: [a-zA-Z]([a-zA-Z] | [0-9])*",
             "num: [1-9]([0-9])* | 0",
             "comment: //(a | b | c | [0-9] | [ ])*",
