@@ -71,7 +71,7 @@ class FiniteAutomaton:
         for i, grupo in enumerate(groups):
             if state in grupo:
                 return i
-        # return 'm' # estado morto
+        return 'm' # estado morto
             
     def minimization(self) -> None:
         # ESTADOS INALCANÇÁVEIS
@@ -123,9 +123,6 @@ class FiniteAutomaton:
         for key in list(self.states.keys()):
             if key not in estados_nao_mortos:
                 del self.states[key]
-                
-        # print('ANTES DA CLASSE DE EQUIVALENCIA')
-        # self.debug_print()
         
         # se nao tiver alfabeto ou tiver só um estado, ja eh minimo
         if not self.alphabet() or len(self.states) <= 1:
