@@ -1,38 +1,33 @@
-from __future__ import annotations
+import definicoes
+import copy
 
-from dataclasses import dataclass
+class Automato:
+    
+    def __init__(self, nome): 
+        self.nome = nome
+        self.estados = {}
+        
+    def add_estado(self, estado):
+        self.estados[estado.nome] = estado
+    
+    def get_inicial(self):
+        return [self.estados[x] for x in self.estados.keys() if self.estados[x].inicial][0]
+    
+    def reconhece(self, palavra):
+        len_busca_largura = 0
+        proximos = [(self.get_inicial(), palavra)]
+        
+        while(proximos is not None and len_busca_largura < definicoes.MAX_BUSCA_LARGURA_AFND):
+            len_busca_largura += 1
+            if any([True for x in proximos if x[0].final and x[1] == '']): return True
+            proximos = [(estado, t[1]) for t in 
+                              [(x[0].get_proximos_estados(x[1][0]), x[1][1:]) for x in proximos if len(x[1]) > 0] +
+                              [(x[0].get_proximos_estados(definicoes.EPISLON), x[1]) for x in proximos]
+                              for estado in t[0]]
+        
+        return any([True for x in proximos if x[0].final and x[1] == ''])
 
-EPSILON = "&"
-
-
-@dataclass(frozen=True, order=True)
-class State:
-    name: str
-    is_final: bool = False
-
-    def __str__(self) -> str:
-        return self.name
-
-
-@dataclass(frozen=True)
-class Transition:
-    source: str
-    symbol: str
-    target: str
-
-    @property
-    def is_epsilon(self) -> bool:
-        return self.symbol == EPSILON
-
-
-class FiniteAutomaton:
-    def __init__(self, name: str = "automaton") -> None:
-        self.name = name
-        self.states: dict[str, State] = {}
-        self.initial_state: str | None = None
-        self.transitions: list[Transition] = []
-
-    def debug_print(self) -> None:
+    """ def debug_print(self) -> None:
         print("\n" + "=" * 60)
         print(f"AUTÔMATO: {self.name}")
         print("=" * 60)
@@ -192,134 +187,47 @@ class FiniteAutomaton:
             new_target = new_states_dict[t.target]
             new_transitions.add(Transition(new_source, t.symbol, new_target))
         
-        self.transitions = list(new_transitions)
+        self.transitions = list(new_transitions) """
+
+    def get_partes_regex(regex):
+        regex_partes = []
         
-    def add_state(self, name: str, *, initial: bool = False, final: bool = False) -> State:
-        current = self.states.get(name)
-        state = State(name=name, is_final=final or (current.is_final if current else False))
-        self.states[name] = state
+        padrao = ''
+        lendo_padrao = False
+        lendo_literal = False
+        for c in regex:
+            if(lendo_padrao):
+                padrao += c
+                if(c == "]"): 
+                    lendo_padrao = False
+                    regex_partes.append(padrao)
+                continue
+            
+            if(lendo_literal):
+                padrao += c
+                lendo_literal = False
+                regex_partes.append(padrao)
+                continue
+                
+            if(c == '\\'):
+                padrao = "\\"
+                lendo_literal = True
+                continue
+            
+            if(c == '['): 
+                padrao = c
+                lendo_padrao = True
+                continue
+                
+            regex_partes.append(c)
+                
+            
+                
+        return regex_partes
 
-        if initial:
-            self.initial_state = name
+    def get_arvore_sintax(regex):
+        pass
 
-        return state
-    
-    def add_transition(self, source: str, symbol: str, target: str) -> Transition:
-        if source not in self.states:
-            self.add_state(source)
-        if target not in self.states:
-            self.add_state(target)
-
-        transition = Transition(source=source, symbol=symbol, target=target)
-        self.transitions.append(transition)
-        return transition
-
-    def alphabet(self) -> set[str]:
-        return {transition.symbol for transition in self.transitions if not transition.is_epsilon}
-
-    def final_states(self) -> set[str]:
-        return {state.name for state in self.states.values() if state.is_final}
-
-    def next_states(self, state_names: set[str], symbol: str) -> set[str]:
-        return {
-            transition.target
-            for transition in self.transitions
-            if transition.source in state_names and _symbol_matches(transition.symbol, symbol)
-        }
-
-    def epsilon_closure(self, state_names: set[str]) -> set[str]:
-        closure = set(state_names)
-        pending = list(state_names)
-
-        while pending:
-            state = pending.pop()
-            for transition in self.transitions:
-                if transition.source == state and transition.is_epsilon and transition.target not in closure:
-                    closure.add(transition.target)
-                    pending.append(transition.target)
-
-        return closure
-
-    def accepts(self, text: str) -> bool:
-        return bool(self.match(text))
-
-    def match(self, text: str) -> set[str]:
-        self._validate_ready()
-
-        current = self.epsilon_closure({self.initial_state or ""})
-        for symbol in text:
-            current = self.epsilon_closure(self.next_states(current, symbol))
-            if not current:
-                return set()
-
-        return current & self.final_states()
-
-    def trace(self, text: str) -> list[tuple[str, set[str]]]:
-        self._validate_ready()
-
-        current = self.epsilon_closure({self.initial_state or ""})
-        steps = [("", current)]
-
-        for symbol in text:
-            current = self.epsilon_closure(self.next_states(current, symbol))
-            steps.append((symbol, current))
-
-        return steps
-
-    def as_table(self) -> list[dict[str, str]]:
-        rows: list[dict[str, str]] = []
-        for transition in self.transitions:
-            rows.append(
-                {
-                    "source": transition.source,
-                    "symbol": transition.symbol,
-                    "target": transition.target,
-                }
-            )
-        return sorted(rows, key=lambda x: (x["source"], x["symbol"], x["target"]))
-
-    def _validate_ready(self) -> None:
-        if self.initial_state is None:
-            raise ValueError("Automaton has no initial state.")
-        if self.initial_state not in self.states:
-            raise ValueError(f"Unknown initial state: {self.initial_state}")
-
-
-def _symbol_matches(expected: str, actual: str) -> bool:
-    if expected == actual:
-        return True
-    if len(actual) == 1 and expected.startswith("[") and expected.endswith("]"):
-        return _matches_char_class(expected, actual)
-    return False
-
-
-def _matches_char_class(char_class: str, char: str) -> bool:
-    content = char_class[1:-1]
-    index = 0
-
-    while index < len(content):
-        start, index = _read_class_char(content, index)
-        if index + 1 < len(content) and content[index] == "-":
-            end, index = _read_class_char(content, index + 1)
-            if start <= char <= end:
-                return True
-            continue
-        if char == start:
-            return True
-
-    return False
-
-
-def _read_class_char(content: str, index: int) -> tuple[str, int]:
-    if content[index] != "\\":
-        return content[index], index + 1
-
-    if index + 1 >= len(content):
-        return "\\", index + 1
-
-    escaped = content[index + 1]
-    if escaped == "t":
-        return "\t", index + 2
-    if escaped == "n":
-        return "\n", index + 2
-    return escaped, index + 2
+    def parse_regex(regex):
+        parts = Automato.get_partes_regex(regex)
+        pass
