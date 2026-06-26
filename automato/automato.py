@@ -1,5 +1,6 @@
 import definicoes
 import copy
+import arvore_sintax.arvore_sintax
 
 class Automato:
     
@@ -189,45 +190,8 @@ class Automato:
         
         self.transitions = list(new_transitions) """
 
-    def get_partes_regex(regex):
-        regex_partes = []
-        
-        padrao = ''
-        lendo_padrao = False
-        lendo_literal = False
-        for c in regex:
-            if(lendo_padrao):
-                padrao += c
-                if(c == "]"): 
-                    lendo_padrao = False
-                    regex_partes.append(padrao)
-                continue
-            
-            if(lendo_literal):
-                padrao += c
-                lendo_literal = False
-                regex_partes.append(padrao)
-                continue
-                
-            if(c == '\\'):
-                padrao = "\\"
-                lendo_literal = True
-                continue
-            
-            if(c == '['): 
-                padrao = c
-                lendo_padrao = True
-                continue
-                
-            regex_partes.append(c)
-                
-            
-                
-        return regex_partes
 
-    def get_arvore_sintax(regex):
-        pass
 
     def parse_regex(regex):
-        parts = Automato.get_partes_regex(regex)
+        parts = arvore_sintax.arvore_sintax.ArvoreSintax(regex)
         pass
