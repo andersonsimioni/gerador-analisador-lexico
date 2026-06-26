@@ -193,5 +193,5 @@ class Automato:
 
 
     def parse_regex(regex):
-        parts = arvore_sintax.arvore_sintax.ArvoreSintax(regex)
+        arvore = arvore_sintax.arvore_sintax.ArvoreSintax(regex)
         pass

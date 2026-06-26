@@ -79,6 +79,24 @@ def build_automato_from_regex(modules, regex):
 
 def run_regex_tests(runner, modules):
     cases = [
+        # Casos chatos para depurar primeiro: concat implicito, precedencia,
+        # parenteses externos, literais escapados e padroes.
+        ("a(b|c)*d", [("ad", True), ("abd", True), ("acbcd", True), ("ab", False), ("da", False)]),
+        ("(a)(b)", [("ab", True), ("a", False), ("b", False), ("", False)]),
+        ("(a|b)c", [("ac", True), ("bc", True), ("c", False), ("abc", False)]),
+        ("a(b|c)", [("ab", True), ("ac", True), ("a", False), ("abc", False)]),
+        ("a|bc", [("a", True), ("bc", True), ("b", False), ("abc", False)]),
+        ("ab|c", [("ab", True), ("c", True), ("a", False), ("abc", False)]),
+        ("a*b", [("b", True), ("ab", True), ("aaaab", True), ("a", False)]),
+        ("ab*", [("a", True), ("ab", True), ("abbbb", True), ("", False)]),
+        ("(a|b)*c", [("c", True), ("ac", True), ("bbac", True), ("ca", False)]),
+        ("a(b|c)*d", [("ad", True), ("abd", True), ("acbcd", True), ("ab", False)]),
+        ("((a|b)c)*", [("", True), ("ac", True), ("bc", True), ("acbc", True), ("a", False)]),
+        ("[a-z][0-9]", [("a0", True), ("m5", True), ("z9", True), ("A1", False)]),
+        ("[a-z]*", [("", True), ("abcxyz", True), ("ABC", False), ("abc1", False)]),
+        (r"a\*b", [("a*b", True), ("ab", False), ("aaab", False), ("a**b", False)]),
+        (r"\(ab\)", [("(ab)", True), ("ab", False), ("(a)", False), ("(ab", False)]),
+        ("(a|&)*b", [("b", True), ("ab", True), ("aaaab", True), ("a", False)]),
         ("a", [("", False), ("a", True), ("aa", False), ("b", False)]),
         ("[a-z]", [("a", True), ("m", True), ("z", True), ("A", False), ("aa", False)]),
         (r"a\*b", [("a*b", True), ("ab", False), ("aaab", False), ("a**b", False)]),

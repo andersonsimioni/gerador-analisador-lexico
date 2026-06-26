@@ -1,7 +1,8 @@
 import definicoes
 
 class ParteRegex:
-    def __init__(self, valor):
+    def __init__(self, _id, valor):
+        self.id = _id
         self.valor = valor
         
         if(self.valor == "|"): self.tipo = definicoes.RegexParteTipo.UNIAO
