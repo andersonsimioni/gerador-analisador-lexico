@@ -15,6 +15,9 @@ class Automato:
     def get_inicial(self):
         return [self.estados[x] for x in self.estados.keys() if self.estados[x].inicial][0]
     
+    def get_TODAS_transicoes(self):
+        return [t for e in self.estados.values() for k in e.transicoes.keys() for t in e.transicoes[k]]
+    
     def reconhece(self, palavra):
         len_busca_largura = 0
         proximos = [(self.get_inicial(), palavra)]
@@ -29,40 +32,43 @@ class Automato:
         
         return any([True for x in proximos if x[0].final and x[1] == ''])
 
-    """ def debug_print(self) -> None:
+    def debug_print(self) -> None:
         print("\n" + "=" * 60)
-        print(f"AUTÔMATO: {self.name}")
+        print(f"AUTOMATO: {self.nome}")
         print("=" * 60)
+        
+        estado_inicial = [x for x in self.estados.keys() if self.estados[x].inicial][0]
 
-        print(f"\nEstado Inicial: {self.initial_state}")
+        print(f"\nEstado Inicial: {estado_inicial}")
 
         print("\nEstados:")
-        for state in self.states.values():
+        for state in self.estados.values():
             flags = []
 
-            if state.name == self.initial_state:
+            if state.inicial:
                 flags.append("INITIAL")
 
-            if state.is_final:
+            if state.final:
                 flags.append("FINAL")
 
             marker = f" [{' | '.join(flags)}]" if flags else ""
-            print(f"  • {state.name}{marker}")
+            print(f"  - {state.nome}{marker}")
 
-        print("\nTransições:")
-        for transition in self.transitions:
-            symbol = "ε" if transition.is_epsilon else transition.symbol
-            print(f"  {transition.source} -- {symbol} --> {transition.target}")
+        print("\nTransicoes:")
+        transicoes = self.get_TODAS_transicoes()
+        for transition in transicoes:
+            symbol = "e" if transition.simbolo == definicoes.EPISLON else transition.simbolo
+            print(f"  {transition.estado_origem.nome} -- {symbol} --> {transition.estado_destino.nome}")
 
         print("\nAlfabeto:")
-        print(f"  {sorted(self.alphabet())}")
+        print(f"  {sorted(set([t.simbolo for t in transicoes if t.simbolo != definicoes.EPISLON]))}")
 
         print("\nEstados Finais:")
-        print(f"  {sorted(self.final_states())}")
+        print(f"  {sorted([x for x in self.estados.keys() if self.estados[x].final])}")
 
         print("=" * 60 + "\n")
         
-        print(f'initial state: {self.initial_state}')
+        print(f'initial state: {estado_inicial}')
         
     def estado_esta_no_grupo(self, state, groups):
         for i, grupo in enumerate(groups):
@@ -71,125 +77,150 @@ class Automato:
         return 'm' # estado morto
             
     def minimization(self) -> None:
-        # ESTADOS INALCANÇÁVEIS
-        # partimos do estado inicial e vamos vendo até onde alcança
-        current_states = [self.initial_state] # começa no estado inicial
-        estados_alcancaveis = [self.initial_state]
+        # ESTADOS INALCANCAVEIS
+        # partimos do estado inicial e vamos vendo ate onde alcanca
+        estado_inicial = [x for x in self.estados.keys() if self.estados[x].inicial][0]
+        current_states = [estado_inicial] # comeca no estado inicial
+        estados_alcancaveis = [estado_inicial]
         
         # para quando os current_states ficarem vazios
         while current_states:
             c = current_states[0]
-            transitions = [x.target for x in self.transitions if x.source == c] # pega as transicoes desse estado
+            transicoes = self.get_TODAS_transicoes()
+            transitions = [t.estado_destino.nome for t in transicoes if t.estado_origem.nome == c] # pega as transicoes desse estado
             current_states.extend([x for x in transitions 
                                    if not x in current_states 
                                    and not x in estados_alcancaveis
-                                ]) # viram os novos current_states, pq eles sao alcançaveis
+                                ]) # viram os novos current_states, pq eles sao alcancaveis
             current_states.remove(c) # esse state ja foi aberto, entao remove ele
-            if not c in estados_alcancaveis: # se esse state nao foi ainda para os estados alcancaveis, add ele lá pq ele é alcançavel
+            if not c in estados_alcancaveis: # se esse state nao foi ainda para os estados alcancaveis, add ele la pq ele eh alcancavel
                 estados_alcancaveis.append(c)
             
-            if len(estados_alcancaveis) == len(self.states): # se o tamanho da lista de estados alcancaveis e da lista de estados é igual, entao todos sao alcançaveis
+            if len(estados_alcancaveis) == len(self.estados): # se o tamanho da lista de estados alcancaveis e da lista de estados eh igual, entao todos sao alcancaveis
                 break
         
-        self.transitions = [x for x in self.transitions if x.source in estados_alcancaveis] # remove as transições dos estados inalcançaveis
-        for key in list(self.states.keys()):
-            if key not in estados_alcancaveis: # remove o estado inalcançavel
-                del self.states[key]
+        for key in self.estados.keys():
+            for simbolo in list(self.estados[key].transicoes.keys()):
+                transicoes_estado = self.estados[key].transicoes[simbolo]
+                transicoes_validas = [x for x in transicoes_estado if x.estado_destino.nome in estados_alcancaveis]
+                self.estados[key].transicoes[simbolo] = transicoes_validas # remove as transicoes dos estados inalcancaveis
+                
+                if transicoes_validas == []:
+                    del self.estados[key].transicoes[simbolo]
+                    
+        for key in list(self.estados.keys()):
+            if key not in estados_alcancaveis: # remove o estado inalcancavel
+                del self.estados[key]
                 
         # ESTADOS MORTOS
-        # partiremos dos estados finais e vemos até onde alcança
-        current_states = [x for x in self.final_states()] # agora o current_state sao os estados finais
-        estados_nao_mortos = [x for x in self.final_states()]
+        # partiremos dos estados finais e vemos ate onde alcanca
+        current_states = [x for x in self.estados.keys() if self.estados[x].final] # agora o current_state sao os estados finais
+        estados_nao_mortos = [x for x in self.estados.keys() if self.estados[x].final]
         
         # para quando os current_states ficarem vazios tbm
         while current_states:
             c = current_states[0]
             
-            # vamos pegando os estados de origem e nao os estados destino que nem na remoção dos estados alcançaveis
-            transitions = [x.source for x in 
-                           self.transitions if x.target == c] 
+            transicoes = self.get_TODAS_transicoes()
+            # vamos pegando os estados de origem e nao os estados destino que nem na remocao dos estados alcancaveis
+            transitions = [x.estado_origem.nome for x in 
+                           transicoes if x.estado_destino.nome == c] 
             current_states.extend([x for x in transitions if not x in current_states and not x in estados_nao_mortos]) 
             current_states.remove(c)
             if not c in estados_nao_mortos:
                 estados_nao_mortos.append(c)
             
-            if len(estados_nao_mortos) == len(self.states):
+            if len(estados_nao_mortos) == len(self.estados):
                 break
             
-        self.transitions = [x for x in self.transitions if x.source in estados_nao_mortos and x.target in estados_nao_mortos]
-        for key in list(self.states.keys()):
+        for key in self.estados.keys():
+            for simbolo in list(self.estados[key].transicoes.keys()):
+                transicoes_estado = self.estados[key].transicoes[simbolo]
+                transicoes_validas = [
+                    x for x in transicoes_estado 
+                    if x.estado_origem.nome in estados_nao_mortos and x.estado_destino.nome in estados_nao_mortos
+                ]
+                self.estados[key].transicoes[simbolo] = transicoes_validas
+                
+                if transicoes_validas == []:
+                    del self.estados[key].transicoes[simbolo]
+                    
+        for key in list(self.estados.keys()):
             if key not in estados_nao_mortos:
-                del self.states[key]
+                del self.estados[key]
         
-        # se nao tiver alfabeto ou tiver só um estado, ja eh minimo
-        if not self.alphabet() or len(self.states) <= 1:
+        alfabeto = set([t.simbolo for t in self.get_TODAS_transicoes() if t.simbolo != definicoes.EPISLON])
+        # se nao tiver alfabeto ou tiver so um estado, ja eh minimo
+        if not alfabeto or len(self.estados) <= 1:
             return
         
         # CLASSES DE EQUIVALENCIA
-        # partimos da 1° separação que é os finais dos não-finais
+        # partimos da 1 separacao que eh os finais dos nao-finais
         grupos = [
-            [x for x in self.final_states()], # finais
-            [x for x in self.states.keys() if not x in self.final_states()] # nao finais
+            [x for x in self.estados.keys() if self.estados[x].final], # finais
+            [x for x in self.estados.keys() if not self.estados[x].final] # nao finais
         ]
         
-        # consideramos que o novo grupo é diferente do grupo antigo pra entrar no while
+        # consideramos que o novo grupo eh diferente do grupo antigo pra entrar no while
         mesmo_grupo = False
         
         while not mesmo_grupo:
-            for symbol in sorted(self.alphabet()):
+            for symbol in sorted(alfabeto):
                 novos_grupos = {}
-                transitions = [x for x in self.transitions if x.symbol == symbol] # pegamos todas as transições por esse simbolo
+                transicoes = self.get_TODAS_transicoes()
+                transitions = [x for x in transicoes if x.simbolo == symbol] # pegamos todas as transicoes por esse simbolo
                 estados_que_tem_transicoes_por_este_simbolo = []
                 for t in transitions:
-                    grupo = self.estado_esta_no_grupo(t.target, grupos) # pegamos o índice do grupo do estado, que esse estado alcança
-                    estados_que_tem_transicoes_por_este_simbolo.append(t.source)
+                    grupo = self.estado_esta_no_grupo(t.estado_destino.nome, grupos) # pegamos o indice do grupo do estado, que esse estado alcanca
+                    estados_que_tem_transicoes_por_este_simbolo.append(t.estado_origem.nome)
                     if grupo not in novos_grupos: # se esse indice nao estiver ainda nos novos_grupos, criamos um vazio
                         novos_grupos[grupo] = []
-                    novos_grupos[grupo].append(t.source) # adicionamos o estado-origem que alcança esse grupo
+                    novos_grupos[grupo].append(t.estado_origem.nome) # adicionamos o estado-origem que alcanca esse grupo
                 
-                if len(estados_que_tem_transicoes_por_este_simbolo) != len(self.states.keys()): # ha transicoes pro estado morto
-                    estados_transicao_pro_morto = self.states.keys() - estados_que_tem_transicoes_por_este_simbolo
+                if len(estados_que_tem_transicoes_por_este_simbolo) != len(self.estados.keys()): # ha transicoes pro estado morto
+                    estados_transicao_pro_morto = set(self.estados.keys()) - set(estados_que_tem_transicoes_por_este_simbolo)
                     novos_grupos['m'] = [x for x in estados_transicao_pro_morto]
 
-                # esse novos_grupos nao será o substituto de "grupos" ainda, pq precisamos separar os finais dos nao-finais
+                # esse novos_grupos nao sera o substituto de "grupos" ainda, pq precisamos separar os finais dos nao-finais
                 novo_grupo_intersec = []
                 for g in grupos:
                     for ng in novos_grupos.values():
-                        intersec = set(g) & set(ng) # faz a intersecção, pra casos em que estados finais e nao-finais apontem pro mesmo grupo (mas nao podem ficar juntos)
+                        intersec = set(g) & set(ng) # faz a interseccao, pra casos em que estados finais e nao-finais apontem pro mesmo grupo (mas nao podem ficar juntos)
                         if(list(intersec) != []):
                             novo_grupo_intersec.append(list(intersec))
-                mesmo_grupo = novo_grupo_intersec == grupos # se for o mesmo grupo significa que chegamos no autômato mínimo
-                grupos = novo_grupo_intersec # novo_grupo_intersec se torna o novo grupo e será usado na próxima iteração com o outro símbolo
+                mesmo_grupo = novo_grupo_intersec == grupos # se for o mesmo grupo significa que chegamos no automato minimo
+                grupos = novo_grupo_intersec # novo_grupo_intersec se torna o novo grupo e sera usado na proxima iteracao com o outro simbolo
         
-        # atualizando o autômato com os novos estados
+        # atualizando o automato com os novos estados
+        transicoes_antigas = self.get_TODAS_transicoes()
         new_states = {}
-        new_states_dict = {} # estados antigos mapeados para os novos para facilitar a mudança das transições
+        new_states_dict = {} # estados antigos mapeados para os novos para facilitar a mudanca das transicoes
         new_initial_state = None
         for g in grupos:
             estado_agrupado = "".join(g) # novo estado agrupado
             for x in g:
                 new_states_dict[x] = estado_agrupado # mapeando estado antigo para o estado novo
-            is_final = any(x for x in self.final_states() if x in g)
+            is_final = any(x for x in [y for y in self.estados.keys() if self.estados[y].final] if x in g)
             
-            if self.initial_state in g:
+            if estado_inicial in g:
                 new_initial_state = estado_agrupado
             
-            new_states[estado_agrupado] = State(is_final=is_final, name=estado_agrupado)
+            new_states[estado_agrupado] = estado.Estado(estado_agrupado, estado_agrupado == new_initial_state, is_final)
             
-        self.states = new_states
-        self.initial_state = new_initial_state
+        self.estados = new_states
 
-        # substituindo as novas transições
+        # substituindo as novas transicoes
         new_transitions = set() # pra nao ter transicoes repetidas
         
-        for t in self.transitions:
-            if t.source not in new_states_dict or t.target not in new_states_dict:
-                continue # significa que essa transição nao existe mais
-            new_source = new_states_dict[t.source]
-            new_target = new_states_dict[t.target]
-            new_transitions.add(Transition(new_source, t.symbol, new_target))
+        for t in transicoes_antigas:
+            if t.estado_origem.nome not in new_states_dict or t.estado_destino.nome not in new_states_dict:
+                continue # significa que essa transicao nao existe mais
+            new_source = new_states_dict[t.estado_origem.nome]
+            new_target = new_states_dict[t.estado_destino.nome]
+            new_transitions.add((new_source, t.simbolo, new_target))
         
-        self.transitions = list(new_transitions) """
+        for t in new_transitions:
+            self.estados[t[0]].add_transicao(transicao.Transicao(self.estados[t[0]], self.estados[t[2]], t[1]))
 
 
     def parse_regex(regex):    
