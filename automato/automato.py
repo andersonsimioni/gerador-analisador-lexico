@@ -193,7 +193,7 @@ class Automato:
 
 
     def parse_regex(regex):    
-        arvore = arvore_sintax.arvore_sintax.ArvoreSintax(regex + '#')
+        arvore = arvore_sintax.arvore_sintax.ArvoreSintax(f"({regex})#")
         raiz_first = arvore_sintax.no_arvore_sintax.NoArvoreSintax.get_ids_partes(arvore.raiz.first)
         id_hastag = arvore.get_id_hastag()
         estados = { raiz_first }
@@ -205,6 +205,7 @@ class Automato:
         while(len(stack)  > 0):
             _estado = stack.pop()
             nome_estado_from = "-".join([str(x) for x in sorted(_estado)])
+            if (id_hastag in _estado): estados_finais.add(nome_estado_from)
             nos = arvore.get_nos(_estado)
             
             simbolos = {x[1].get_parte_regex_valor(): set() for x in nos}

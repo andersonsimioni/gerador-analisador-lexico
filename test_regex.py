@@ -79,7 +79,25 @@ def build_automato_from_regex(modules, regex):
 
 def run_regex_tests(runner, modules):
     cases = [
+        # Debug primeiro: casos que expoem estado final calculado errado.
+        ("a|b", [("a", True), ("b", True), ("", False), ("ab", False), ("c", False)]),
+        ("a|bc", [("a", True), ("bc", True), ("b", False), ("abc", False)]),
+        ("ab|c", [("ab", True), ("c", True), ("a", False), ("abc", False)]),
+        ("a|b|c", [("a", True), ("b", True), ("c", True), ("ab", False), ("", False)]),
+        ("[a-z]|[0-9]", [("a", True), ("z", True), ("0", True), ("9", True), ("A", False)]),
+        ("(a|&)", [("", True), ("a", True), ("aa", False), ("b", False)]),
+        ("&", [("", True), ("a", False), ("&", False)]),
+        ("((a|b)*)|(cd)", [("", True), ("abba", True), ("cd", True), ("c", False), ("abcd", False)]),
+        # Depois: tokenizer/literal/pattern, para nao misturar os bugs.
+        (r"\[", [("[", True), ("]", False), ("", False), ("[[", False)]),
+        (r"\\", [("\\", True), ("", False), ("\\\\", False), ("/", False)]),
+        (r"\[a-z\]", [("[a-z]", True), ("a", False), ("z", False), ("[m]", False)]),
+        (r"\\[a-z]", [("\\a", True), ("\\z", True), ("a", False), ("\\A", False)]),
         # Debug primeiro: simbolos compostos usados como transicoes do AFD.
+        ("[abc]", [("a", True), ("b", True), ("c", True), ("d", False), ("ab", False)]),
+        ("[abcA-Z]", [("a", True), ("b", True), ("c", True), ("A", True), ("M", True), ("Z", True), ("d", False), ("z", False)]),
+        ("[a-cx-z]", [("a", True), ("b", True), ("c", True), ("x", True), ("y", True), ("z", True), ("d", False), ("w", False)]),
+        ("[0-3abc]", [("0", True), ("2", True), ("3", True), ("a", True), ("b", True), ("c", True), ("4", False), ("d", False)]),
         ("[a-z]", [("a", True), ("m", True), ("z", True), ("A", False), ("aa", False)]),
         ("[0-9]", [("0", True), ("7", True), ("9", True), ("a", False), ("10", False)]),
         ("[a-c]", [("a", True), ("b", True), ("c", True), ("d", False), ("", False)]),

@@ -21,7 +21,17 @@ class ArvoreSintax:
         last = None
         lendo_padrao = False
         lendo_literal = False
+        parte_atual = None
         for i, c in enumerate(self.regex):
+            
+            if(c == '\\' and not (lendo_padrao or lendo_literal)):
+                padrao = "\\"
+                lendo_literal = True
+                continue
+            elif(c == '[' and not (lendo_padrao or lendo_literal)): 
+                padrao = c
+                lendo_padrao = True
+                continue
             
             if(lendo_padrao):
                 padrao += c
@@ -33,18 +43,10 @@ class ArvoreSintax:
                 padrao += c
                 lendo_literal = False
                 parte_atual = arvore_sintax.parte_regex.ParteRegex(i, padrao)
-            else:
-                parte_atual = arvore_sintax.parte_regex.ParteRegex(i, c)
                 
-            if(c == '\\'):
-                padrao = "\\"
-                lendo_literal = True
-                continue
             
-            if(c == '['): 
-                padrao = c
-                lendo_padrao = True
-                continue
+            
+            if(parte_atual == None): parte_atual = arvore_sintax.parte_regex.ParteRegex(i, c)
             
             tipos = definicoes.RegexParteTipo
             
@@ -56,6 +58,7 @@ class ArvoreSintax:
                 
             regex_partes.append(parte_atual)
             last = parte_atual
+            parte_atual = None
                 
         return regex_partes
     

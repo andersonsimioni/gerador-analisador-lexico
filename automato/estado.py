@@ -1,6 +1,8 @@
 import transicao
 import definicoes
 
+PATTERN_CACHE = {}
+
 class Estado:
     
     def __init__(self, nome, inicial, final):
@@ -17,26 +19,17 @@ class Estado:
     
     def in_pattern(self, simbolo, pattern):
         blocos = []
+        
         aux = pattern[1:-1]
+        while('-' in aux):
+            _range_index = str(aux).index('-')
+            _range = aux[_range_index-1: _range_index+2]
+            aux = str(aux).replace(_range, '')
+            blocos.append(_range.split('-'))
         
-        cache = ''
-        fechar = False
-        for i, c in enumerate(aux):
-            if(fechar == True):
-                cache += c
-                fechar = False
-                blocos.append(cache.split('-'))
-                cache = ""
-                continue
-            
-            if(fechar ==False and c == '-'):
-                cache += c
-                fechar = True
-                continue
-            
-            cache += c
+        blocos.append(aux)
         
-        return any([b for b in blocos if (len(b) > 0 and b[0] <= simbolo <= b[1])])
+        return any([b for b in blocos if (b[0] <= simbolo <= b[1] if type(b) == type([]) else simbolo in b)])
     
     def get_transicoes(self, simbolo):
         return set(
