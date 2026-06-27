@@ -1,6 +1,7 @@
 import definicoes
 import copy
-import arvore_sintax.arvore_sintax
+import arvore_sintax.arvore_sintax, arvore_sintax.no_arvore_sintax, arvore_sintax.parte_regex
+import estado, transicao
 
 class Automato:
     
@@ -191,7 +192,39 @@ class Automato:
         self.transitions = list(new_transitions) """
 
 
-
-    def parse_regex(regex):
-        arvore = arvore_sintax.arvore_sintax.ArvoreSintax(regex)
-        pass
+    def parse_regex(regex):    
+        arvore = arvore_sintax.arvore_sintax.ArvoreSintax(regex + '#')
+        raiz_first = arvore_sintax.no_arvore_sintax.NoArvoreSintax.get_ids_partes(arvore.raiz.first)
+        id_hastag = arvore.get_id_hastag()
+        estados = { raiz_first }
+        estados_finais = set()
+        estado_inicial = "-".join([str(x) for x in sorted(raiz_first)])
+        transicoes = set() # (estado_from, simbolo, estado_to)
+        
+        stack = [raiz_first]
+        while(len(stack)  > 0):
+            _estado = stack.pop()
+            nome_estado_from = "-".join([str(x) for x in sorted(_estado)])
+            nos = arvore.get_nos(_estado)
+            
+            simbolos = {x[1].get_parte_regex_valor(): set() for x in nos}
+            for n in nos:
+                simbolos[n[1].get_parte_regex_valor()].add(n[1]) 
+            
+            for k in simbolos:
+                if k == "#": continue
+                follows = frozenset([f.get_parte_regex_id() for n in simbolos[k] for f in n.follow])
+                if(follows not in stack and follows not in estados):
+                    estados.add(follows)
+                    stack.append(follows)
+                nome_estado_to = "-".join([str(x) for x in sorted(follows)])
+                transicoes.add((nome_estado_from, k, nome_estado_to))
+                if (id_hastag in follows): estados_finais.add(nome_estado_to)
+                
+        AF = Automato('Aho')
+    
+        _estados = {s: estado.Estado(s, s == estado_inicial, s in estados_finais) for s in ["-".join([str(y) for y in sorted(x)]) for x in estados]}
+        for t in transicoes:_estados[t[0]].add_transicao(transicao.Transicao(_estados[t[0]], _estados[t[2]], t[1]))
+        for k in _estados.keys(): AF.add_estado(_estados[k])
+        
+        return AF

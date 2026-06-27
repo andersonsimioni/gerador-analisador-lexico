@@ -2,11 +2,15 @@ import arvore_sintax.no_arvore_sintax, arvore_sintax.parte_regex, definicoes
 
 class ArvoreSintax:
     def __init__(self, regex):
+        self.nos = {} #chave(id no arvore) = (regex parte, no arvore)
         self.regex = regex
         self.regex_partes = self.get_partes_regex()
         self.raiz = self.build_arvore(self.regex_partes)
         self.calcular_nullable_first_last(self.raiz)
         self.calcular_follows(self.raiz)
+    
+    def get_parte_by_id(self, _id):
+        return [x for x in self.regex_partes if x.id == _id][0]
     
     #divide o regex em partes indexadas, 
     # ex: [a-zA-z]*ab [[a-zA-z], *, a, CONCAT, b]
@@ -48,7 +52,7 @@ class ArvoreSintax:
             tipos_esquerda = [tipos.SIMBOLO_OU_LITERAL_OU_PADRAO, tipos.EPISLON, tipos.R_PARENTESES, tipos.ESTRELA, tipos.SOMA, tipos.OPCIONAL ]
             
             if(last != None and last.tipo in tipos_esquerda and parte_atual.tipo in tipos_direita):
-                regex_partes.append(arvore_sintax.parte_regex.ParteRegex(i, "."))
+                regex_partes.append(arvore_sintax.parte_regex.ParteRegex(-1, "."))
                 
             regex_partes.append(parte_atual)
             last = parte_atual
@@ -89,8 +93,10 @@ class ArvoreSintax:
             
         if parts[-1].tipo in [tipos.ESTRELA, tipos.SOMA, tipos.OPCIONAL]:
             return no.NoArvoreSintax(parts[-1], child=self.build_arvore(parts[:-1]))
-            
-        return no.NoArvoreSintax(parts[0])
+        
+        no_novo = no.NoArvoreSintax(parts[0])
+        self.nos[parts[0].get_id()] = (parts[0], no_novo)
+        return no_novo
     
     #calcula first, last e follow na arvore de sintax pronta
     def calcular_nullable_first_last(self, no):
@@ -103,23 +109,23 @@ class ArvoreSintax:
         
         if(tipo == tipos.SIMBOLO_OU_LITERAL_OU_PADRAO):
             no.nullable = False
-            no.first = [no]
-            no.last = [no]
+            no.first = {no}
+            no.last = {no}
         elif(tipo == tipos.EPISLON):
             no.nullable = True
-            no.first = []
-            no.last = []
+            no.first = set()
+            no.last = set()
         elif(tipo == tipos.UNIAO):
             no.nullable = no.left.nullable or no.right.nullable
-            no.first = no.left.first + no.right.first
-            no.last = no.left.last + no.right.last
+            no.first = no.left.first | no.right.first
+            no.last = no.left.last | no.right.last
         elif tipo == tipos.CONCAT:
           no.nullable = no.left.nullable and no.right.nullable
 
-          if no.left.nullable: no.first = no.left.first + no.right.first
+          if no.left.nullable: no.first = no.left.first | no.right.first
           else: no.first = no.left.first
 
-          if no.right.nullable: no.last = no.left.last + no.right.last
+          if no.right.nullable: no.last = no.left.last | no.right.last
           else: no.last = no.right.last
 
         elif tipo == tipos.ESTRELA:
@@ -145,8 +151,17 @@ class ArvoreSintax:
         if no.child is not None: self.calcular_follows(no.child)
         
         if(tipo == tipos.CONCAT):
-            for last in no.left.last: last.follow += no.right.first
+            for last in no.left.last: last.follow |= no.right.first
         elif(tipo == tipos.ESTRELA):
-            for last in no.child.last: last.follow += no.child.first
+            for last in no.child.last: last.follow |= no.child.first
         elif(tipo == tipos.SOMA):
-            for last in no.child.last: last.follow += no.child.first
+            for last in no.child.last: last.follow  |=  no.child.first
+            
+    def get_nos(self, ids_partes):
+        #chave(id no arvore) = (regex parte, no arvore)
+        nos = [self.nos[x] for x in ids_partes]
+        return nos
+    
+    def get_id_hastag(self):
+        return [self.nos[x][1].get_parte_regex_id() for x in self.nos.keys() if self.nos[x][1].get_parte_regex_valor() == '#'][0]
+        

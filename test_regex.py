@@ -79,8 +79,23 @@ def build_automato_from_regex(modules, regex):
 
 def run_regex_tests(runner, modules):
     cases = [
+        # Debug primeiro: simbolos compostos usados como transicoes do AFD.
+        ("[a-z]", [("a", True), ("m", True), ("z", True), ("A", False), ("aa", False)]),
+        ("[0-9]", [("0", True), ("7", True), ("9", True), ("a", False), ("10", False)]),
+        ("[a-c]", [("a", True), ("b", True), ("c", True), ("d", False), ("", False)]),
+        ("[x-z]", [("x", True), ("y", True), ("z", True), ("w", False), ("xy", False)]),
+        ("[a-zA-Z]", [("a", True), ("Z", True), ("m", True), ("5", False), ("az", False)]),
+        ("[a-zA-Z0-9]", [("a", True), ("Z", True), ("5", True), ("_", False), ("a5", False)]),
+        (r"\*", [("*", True), ("", False), ("a", False), ("**", False)]),
+        (r"\|", [("|", True), ("", False), ("a", False), ("||", False)]),
+        (r"\(", [("(", True), (")", False), ("", False), ("((", False)]),
+        (r"\[", [("[", True), ("]", False), ("", False), ("[[", False)]),
+        (r"\\", [("\\", True), ("", False), ("\\\\", False), ("/", False)]),
+        (r"a\*b", [("a*b", True), ("ab", False), ("aaab", False), ("a**b", False)]),
+        (r"\(ab\)", [("(ab)", True), ("ab", False), ("(a)", False), ("(ab", False)]),
         # Casos chatos para depurar primeiro: concat implicito, precedencia,
         # parenteses externos, literais escapados e padroes.
+        ("a(a|b)*b", [("ab", True), ("aab", True), ("abb", True), ("aa", False), ("ba", False)]),
         ("a(b|c)*d", [("ad", True), ("abd", True), ("acbcd", True), ("ab", False), ("da", False)]),
         ("(a)(b)", [("ab", True), ("a", False), ("b", False), ("", False)]),
         ("(a|b)c", [("ac", True), ("bc", True), ("c", False), ("abc", False)]),
@@ -174,7 +189,7 @@ def run_regex_tests(runner, modules):
         ("(a|b*)c", [("ac", True), ("c", True), ("bbc", True), ("bc", True), ("ab", False)]),
         ("(a|b)(a|b)", [("aa", True), ("ab", True), ("ba", True), ("bb", True), ("a", False)]),
         ("(a|b)(a|b)*", [("a", True), ("b", True), ("abba", True), ("", False), ("abc", False)]),
-        ("a(a|b)*b", [("ab", True), ("aab", True), ("abb", True), ("aa", False), ("ba", False)]),
+        
         ("(0|1)*", [("", True), ("0", True), ("1", True), ("01011", True), ("2", False)]),
         ("0(0|1)*1", [("01", True), ("001", True), ("0101", True), ("0", False), ("10", False)]),
         ("(01)*", [("", True), ("01", True), ("0101", True), ("0", False), ("011", False)]),

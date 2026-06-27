@@ -15,3 +15,7 @@ class ParteRegex:
         elif(self.valor == definicoes.EPISLON): self.tipo = definicoes.RegexParteTipo.EPISLON
         else: self.tipo = definicoes.RegexParteTipo.SIMBOLO_OU_LITERAL_OU_PADRAO
         
+    def get_valor(self): return self.valor
+    
+    def get_id(self): return self.id
+        
