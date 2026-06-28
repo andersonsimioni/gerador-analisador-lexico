@@ -12,8 +12,7 @@ class GramaticaLivreDeContexto:
         if(not extender): self.GLC_exntedida = GramaticaLivreDeContexto(GLC_em_string, True)
         else: 
             #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
-            self.goto = {} #formato = [S' -> ·Sa] = I0
-            self.itens_LR0 = self.calcula_colecao_items_LR0()
+            self.itens_LR0, self.gotos_LR0 = self.calcula_colecao_items_LR0()
 
     def monta_GLC_obj(self, extender = False):
         cabecas = set()
@@ -35,6 +34,10 @@ class GramaticaLivreDeContexto:
             producoes.add(producao.Producao(l, cabecas))
         
         return producoes
+
+    def get_gotos(self): return self.GLC_exntedida.gotos_LR0
+    
+    def get_itens_LR0(self): return self.GLC_exntedida.itens_LR0
             
     def get_cabecas(self): return [p.cabeca for p in self.producoes]
     
@@ -156,9 +159,11 @@ class GramaticaLivreDeContexto:
     def calcula_colecao_items_LR0(self):
         prod_inicial = [p for p in self.producoes if p.cabeca == self.cabeca_inicial][0]
         prod_inicial_closure = self.calcula_closure([prod_item_LR0.ProdItemLR0(prod_inicial, 0)])
-        itens = [ prod_inicial_closure ]
         
-        #producoes apontam pra itens, ex: ["S' -> ·Sa"]=0 é "S' -> ·Sa" esta em I0
+        itens = [ prod_inicial_closure ]
+        gotos = {}
+        
+        #['S->ABC \n A->zxc..'] = I0, itens/chaves apontam pra indice
         map_lr0_items = { self.lr0_item_to_str(k):0 for k in itens }
         
         mudou = True
@@ -176,12 +181,18 @@ class GramaticaLivreDeContexto:
                     
                     novo_item = self.calcula_closure(novo_item)
                     if(self.lr0_item_to_str(novo_item) not in map_lr0_items):
-                        map_lr0_items[self.lr0_item_to_str(novo_item)] = len(itens)
+                        id_novo_item = len(itens)
+                        map_lr0_items[self.lr0_item_to_str(novo_item)] = id_novo_item
                         itens.append(novo_item)
                         mudou = True
+                    else:
+                        id_novo_item = map_lr0_items[self.lr0_item_to_str(novo_item)]
                         
-                        
-                    pass
-            pass
+                    #goto(I_from, Simbolo) = I_to
+                    #i, s, id_novo_item = GOT(i, s) = id_novo_item
+                    id_item_antigo = i
+                    simbolo = s
+                    if(id_item_antigo not in gotos.keys()): gotos[id_item_antigo] = {}
+                    gotos[id_item_antigo][simbolo] = id_novo_item
         
-        return itens
+        return itens, gotos

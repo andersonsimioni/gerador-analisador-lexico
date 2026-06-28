@@ -147,8 +147,8 @@ def executar_colecao(texto):
             sys.path.insert(0, str(SINTATICO_DIR))
 
         gramatica_livre = __import__("gramatica_livre")
-        glc = gramatica_livre.GramaticaLivreDeContexto(texto, True)
-        colecao = glc.calcula_colecao_items_LR0()
+        glc = gramatica_livre.GramaticaLivreDeContexto(texto)
+        colecao = glc.get_itens_LR0()
 
         estados = [normalizar_estado(estado) for estado in colecao]
 

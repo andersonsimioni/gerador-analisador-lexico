@@ -11,6 +11,8 @@ class ProdItemLR0:
     
     def avanca_simbolo_atual(self): return ProdItemLR0(self.producao, self.index_ponto + 1)
     
+    def volta_simbolo_atual(self): return ProdItemLR0(self.producao, self.index_ponto - 1)
+    
     def finalizo(self): return self.index_ponto >= len(self.producao.corpo)
     
     def __str__(self): 
