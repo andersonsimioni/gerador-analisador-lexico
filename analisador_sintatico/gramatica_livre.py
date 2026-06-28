@@ -12,6 +12,8 @@ class GramaticaLivreDeContexto:
         #self.follows = self.calcular_follow()
         self.firsts ={}
         self.follows ={}
+        self._firsts_stack = set()
+        self._follows_stack = set()
         self.set_firsts()
         self.set_follows()
         
@@ -144,8 +146,40 @@ class GramaticaLivreDeContexto:
         
         return follows """
     
+    def _wrap_grammar_api(self):
+        def wrap_symbol(s):
+            class Symbol(str):
+                def __new__(cls, value, is_terminal):
+                    obj = str.__new__(cls, value)
+                    obj.is_terminal = is_terminal
+                    return obj
+                def isupper(self): return not self.is_terminal
+            return Symbol(s.simbolo, s.is_terminal)
+
+        def wrap_production(p):
+            class ProductionWrapper:
+                head = p.cabeca
+                body = [wrap_symbol(s) for s in p.corpo]
+            return ProductionWrapper()
+
+        class GrammarWrapper:
+            productions = [wrap_production(p) for p in self.producoes]
+            start_symbol = self.cabeca_inicial
+            def get_productions_by_head(self, head):
+                return [p for p in self.productions if p.head == head]
+            def get_productions_with_symbol_on_body(self, symbol):
+                return [p for p in self.productions if symbol in p.body]
+            def has_epsolon_productions_by_head(self, head):
+                return any(p.head == head and definicoes.EPISLON in p.body for p in self.productions)
+
+        return GrammarWrapper()
+    
     def get_firsts_by_head(self, head:str):
-        productions = self.grammar.get_productions_by_head(head)
+        if head in self._firsts_stack: return []
+
+        self._firsts_stack.add(head)
+        grammar = self._wrap_grammar_api()
+        productions = grammar.get_productions_by_head(head)
         firsts = []
         for p in productions:
             i = 0
@@ -156,18 +190,21 @@ class GramaticaLivreDeContexto:
                     break
                 else:
                     firsts.extend(self.get_firsts_by_head(first_symbol))
-                    if self.grammar.has_epsolon_productions_by_head(first_symbol) and i < (len(p.body) - 1):
-                        firsts.remove(definicoes.EPISLON)
+                    if grammar.has_epsolon_productions_by_head(first_symbol) and i < (len(p.body) - 1):
+                        if definicoes.EPISLON in firsts:
+                            firsts.remove(definicoes.EPISLON)
                         i += 1
                     else:
                         break
         firsts = list(set(firsts))
+        self._firsts_stack.remove(head)
         return firsts
     
     def set_firsts(self):
+        grammar = self._wrap_grammar_api()
         dict_prd: dict[str, list[Production]] = {}
         
-        for p in self.grammar.productions:
+        for p in grammar.productions:
             if not p.head in dict_prd:
                 dict_prd[p.head] = []
                 
@@ -180,11 +217,16 @@ class GramaticaLivreDeContexto:
             self.firsts[head].update(firsts)
     
     def get_follows_by_head(self, symbol:str):
-        all_productions = self.grammar.get_productions_with_symbol_on_body(symbol)
-        productions = [x for x in all_productions if x.head != symbol]
+        #trava anti recursao
+        if symbol in self._follows_stack: return []
+
+        self._follows_stack.add(symbol)
+        grammar = self._wrap_grammar_api()
+        all_productions = grammar.get_productions_with_symbol_on_body(symbol)
+        productions = all_productions
         
         follows = []
-        if symbol == self.grammar.start_symbol:
+        if symbol == grammar.start_symbol:
             follows.append('$')
 
         for p in productions:
@@ -215,7 +257,11 @@ class GramaticaLivreDeContexto:
                                     follows.append(next_symbol2)
                                     break;
                                 elif definicoes.EPISLON in self.firsts[next_symbol2]:
+                                    follows.extend([x for x in self.firsts[next_symbol2] if x != definicoes.EPISLON])
                                     i2 += 1
+                                else:
+                                    follows.extend(self.firsts[next_symbol2])
+                                    break
                                     
                     # Se A ::= αBβ ∈ P e β != ε, 
                     # então adicione FIRST(β) em  FOLLOW(B)
@@ -228,12 +274,15 @@ class GramaticaLivreDeContexto:
                     else:
                         follows_head = list(self.follows[p.head])
                     follows.extend(follows_head)
-            
+        
+        #trava anti recursao
+        self._follows_stack.remove(symbol)
         return follows
     
     def set_follows(self):
+        grammar = self._wrap_grammar_api()
         symbols = set()
-        for p in self.grammar.productions:
+        for p in grammar.productions:
             symbols.add(p.head)
         
         for s in symbols:

@@ -503,25 +503,39 @@ def run_first_follow_tests(runner):
 
 
 def run_generated_stress_tests(runner):
-    print("\n== FIRST/FOLLOW stress gerado ==")
+    print("\n== FIRST/FOLLOW stress gerado dificil ==")
 
-    for i in range(100):
+    for i in range(1000):
         S = f"S{i}"
         A = f"A{i}"
         B = f"B{i}"
         C = f"C{i}"
+        D = f"D{i}"
+        E = f"E{i}"
         t1 = f"a{i}"
         t2 = f"b{i}"
         t3 = f"c{i}"
+        t4 = f"d{i}"
+        t5 = f"e{i}"
+        t6 = f"g{i}"
         fim = f"fim{i}"
+        wrap = f"wrap{i}"
+        end = f"end{i}"
 
         texto = "\n".join([
-            f"{S} ::= {A} {B} {C} {fim}",
-            f"{A} ::= {t1}",
+            f"{S} ::= {A} {B} {C} {D} {E} {fim}",
+            f"{S} ::= {wrap} {S} {end}",
+            f"{A} ::= {t1} {A}",
             f"{A} ::= &",
-            f"{B} ::= {t2}",
+            f"{B} ::= {t2} {B}",
+            f"{B} ::= {C} {D}",
             f"{B} ::= &",
-            f"{C} ::= {t3}",
+            f"{C} ::= {t3} {C}",
+            f"{C} ::= &",
+            f"{D} ::= {t4} {D}",
+            f"{D} ::= &",
+            f"{E} ::= {t5} {E}",
+            f"{E} ::= {t6}",
         ])
 
         check_first_follow(
@@ -529,16 +543,20 @@ def run_generated_stress_tests(runner):
             f"stress {i + 1:03}",
             texto,
             {
-                S: {t1, t2, t3},
+                S: {t1, t2, t3, t4, t5, t6, wrap},
                 A: {t1, EPSILON},
-                B: {t2, EPSILON},
-                C: {t3},
+                B: {t2, t3, t4, EPSILON},
+                C: {t3, EPSILON},
+                D: {t4, EPSILON},
+                E: {t5, t6},
             },
             {
-                S: {FIM},
-                A: {t2, t3},
-                B: {t3},
-                C: {fim},
+                S: {FIM, end},
+                A: {t2, t3, t4, t5, t6},
+                B: {t3, t4, t5, t6},
+                C: {t3, t4, t5, t6},
+                D: {t3, t4, t5, t6},
+                E: {fim},
             }
         )
 
