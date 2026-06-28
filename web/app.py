@@ -2,19 +2,23 @@ from flask import Flask, render_template, request
 from graphviz import Digraph
 from pathlib import Path
 import sys
+import tempfile
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 AUTOMATO_DIR = BASE_DIR / "automato"
-sys.path.insert(0, str(BASE_DIR))
+ANALISADOR_DIR = BASE_DIR / "analisador_lexo"
 sys.path.insert(0, str(AUTOMATO_DIR))
+sys.path.insert(0, str(BASE_DIR))
+sys.path.insert(0, str(ANALISADOR_DIR))
 
-from automato import Automato
+from automato.automato import Automato
+from analisador_lexo import AnalisadorLexo
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    result = []
+    tabela_tokens = ""
     automata_svgs = []
 
     if request.method == "POST":
@@ -44,20 +48,20 @@ def index():
                 automaton_to_svg(automaton, name=name)
             )
 
-        main_automaton = automata[0][1] if automata else None
-
-        for text in test_content.splitlines():
-            text = text.strip()
-            if not text:
-                continue
-
-            result.append(
-                (text, "accepted" if main_automaton.reconhece(text) else "rejected")
-            )
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as defs_tmp:
+            defs_tmp.write(def_content)
+            path_defs = defs_tmp.name
+            
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as testes_tmp:
+            testes_tmp.write(test_content)
+            path_testes = testes_tmp.name
+            
+        analisador = AnalisadorLexo(path_defs)
+        tabela_tokens = analisador.get_tabela_tokens(path_testes)
 
     return render_template(
         "index.html",
-        result=result,
+        tabela_tokens=tabela_tokens,
         automata_svgs=automata_svgs
     )
 

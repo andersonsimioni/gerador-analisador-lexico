@@ -2,38 +2,30 @@
 <html>
 
 <head>
-    <title>Gerador de Analisadores Léxicos</title>
+    <title>Gerador de Analisadores Lexicos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
 </head>
 
 <body class="row col-10 m-auto card p-4 mt-5">
-    <form method="POST" enctype="multipart/form-data" class=" m-auto " onsubmit="showLoading()">
-        <h3>Regex → DFA Tester</h3>
+    <form method="POST" enctype="multipart/form-data" class="m-auto" onsubmit="showLoading()">
+        <h3>Gerador de Analisadores Lexicos</h3>
         <div class="row">
             <div class="col-12 col-lg-6">
-                <label class="form-label">Arquivo de definições (regex)</label>
+                <label class="form-label">Arquivo de definicoes (regex)</label>
                 <input type="file" class="form-control" name="definitions"><br><br>
             </div>
             <div class="col">
-
                 <label class="form-label">Arquivo de testes</label>
                 <input type="file" class="form-control" name="tests"><br><br>
-
             </div>
         </div>
         <button type="submit" class="btn btn-success">Executar</button>
     </form>
 
-    {% if result %}
-    <h3>Resultado:</h3>
-    <p>
-        {% if result %}
-        ✅ Aceito
-        {% else %}
-        ❌ Rejeitado
-        {% endif %}
-    </p>
+    {% if tabela_tokens %}
+    <h3>Lista de tokens</h3>
+    <pre class="bg-light border rounded p-3">{{ tabela_tokens }}</pre>
     {% endif %}
 
     <div id="loading" style="
@@ -50,11 +42,11 @@
         padding-top:200px;
         z-index:9999;
     ">
-        ⏳ Desenhando autômatos...
+        Desenhando automatos...
     </div>
 
     {% if automata_svgs %}
-    <h3>Autômatos gerados</h3>
+    <h3>Automatos gerados</h3>
     {% for svg in automata_svgs %}
     <div style="margin-bottom: 40px;">
         {{ svg | safe }}
@@ -69,8 +61,6 @@
     }
 </script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-    crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 
 </html>
