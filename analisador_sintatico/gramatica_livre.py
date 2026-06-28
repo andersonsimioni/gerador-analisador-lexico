@@ -1,16 +1,21 @@
-import producao,definicoes
+import producao,definicoes,prod_item_LR0
 
 
 class GramaticaLivreDeContexto:
     
-    def __init__(self, GLC_em_string):
+    def __init__(self, GLC_em_string, extender=False):
         self.GLC_em_string = GLC_em_string
         self.cabeca_inicial = None
-        self.producoes = self.monta_GLC_obj()
+        self.producoes = self.monta_GLC_obj(extender)
         self.firsts = self.calcular_first()
         self.follows = self.calcular_follow()
+        if(not extender): self.GLC_exntedida = GramaticaLivreDeContexto(GLC_em_string, True)
+        #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
+        else: 
+            self.goto = {} #formato = [S' -> ·Sa] = I0
+            self.itens_LR0 = self.calcula_colecao_items_LR0()
 
-    def monta_GLC_obj(self):
+    def monta_GLC_obj(self, extender = False):
         cabecas = set()
         producoes = set()
         
@@ -18,7 +23,14 @@ class GramaticaLivreDeContexto:
             p = producao.Producao(l)
             if(self.cabeca_inicial == None): self.cabeca_inicial = p.cabeca
             cabecas.add(p.cabeca)
-            
+        
+        if(extender):
+            novo_inicial = self.cabeca_inicial
+            while(novo_inicial in cabecas): novo_inicial += '\''
+            cabecas = {novo_inicial} | cabecas
+            producoes.add(producao.Producao(f"{novo_inicial} ::= {self.cabeca_inicial}", cabecas))
+            self.cabeca_inicial = novo_inicial
+        
         for l in self.GLC_em_string.split('\n'): 
             producoes.add(producao.Producao(l, cabecas))
         
@@ -117,3 +129,56 @@ class GramaticaLivreDeContexto:
                     if(definicoes.EPISLON not in self.firsts[simbolo]): break
         
         return follows
+    
+    def calcula_closure(self, lr0_item_prods):
+        closure = [] + lr0_item_prods
+        stack = [] + lr0_item_prods
+        
+        prods_novas = []
+        while(len(stack) > 0):
+            prod = stack.pop()
+            if(prod.finalizo()): continue
+            simbolo_atual = prod.get_simbolo_atual()
+            if(simbolo_atual.is_terminal): continue
+            
+            prods = [p for p in self.producoes if p.cabeca == simbolo_atual.simbolo and p not in prods_novas]
+            for p in prods:
+                prods_novas.append(p)
+                lr0 = prod_item_LR0.ProdItemLR0(p, 0)
+                closure.append(lr0)
+                stack.append(lr0)
+        
+        return closure
+    
+    #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
+    def calcula_colecao_items_LR0(self):
+        prod_inicial = [p for p in self.producoes if p.cabeca == self.cabeca_inicial][0]
+        prod_inicial_closure = self.calcula_closure([prod_item_LR0.ProdItemLR0(prod_inicial, 0)])
+        itens = [ prod_inicial_closure ]
+        
+        #producoes apontam pra itens, ex: [S' -> ·Sa] = I0
+        map_lr0_prods_items = { str(k):0 for k in prod_inicial_closure }
+        
+        """ closure
+        goto/desvio
+        novos estados LR(0)
+        transições entre estados """
+        mudou = True
+        while mudou:
+            mudou = False
+            
+            for i,item in enumerate(itens):
+                for p in [x for x in item if not x.finalizo()]:
+                    
+                    avancado = p.avanca_simbolo_atual()
+                    if(str(avancado) not in map_lr0_prods_items):
+                        novo_item = [avancado]
+                        novo_item = self.calcula_closure(novo_item)
+                        itens.append(novo_item)
+                        mudou = True
+                        
+                        
+                    pass
+            pass
+        
+        return itens
