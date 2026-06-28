@@ -3,7 +3,9 @@ import sys
 import traceback
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 SINTATICO_DIR = BASE_DIR / "analisador_sintatico"
 
 
@@ -39,6 +41,12 @@ def normalizar_item_str(item):
 
 def normalizar_estado(estado):
     return frozenset(normalizar_item_str(item) for item in estado)
+
+
+def normalizar_simbolo_goto(simbolo):
+    if isinstance(simbolo, (tuple, list)):
+        return simbolo[0]
+    return simbolo
 
 
 def formatar_transicoes(transicoes):
@@ -169,7 +177,7 @@ def executar_gotos(texto):
         transicoes = set()
         for origem, destinos in gotos.items():
             for simbolo, destino in destinos.items():
-                transicoes.add((estados[origem], simbolo, estados[destino]))
+                transicoes.add((estados[origem], normalizar_simbolo_goto(simbolo), estados[destino]))
 
         return {
             "ok": True,

@@ -3,9 +3,11 @@ import sys
 import traceback
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 AUTOMATO_DIR = BASE_DIR / "automato"
-ANALISADOR_DIR = BASE_DIR / "analisador_lexo"
+ANALISADOR_DIR = BASE_DIR / "analisador_lexico"
 EXEMPLOS_DIR = BASE_DIR / "exemplos"
 
 
@@ -41,11 +43,11 @@ def add_paths():
 def load_analisador(runner):
     print("\n== Imports ==")
     try:
-        module = __import__("analisador_lexo")
-        runner.check("import analisador_lexo", True)
+        module = __import__("analisador_lexico")
+        runner.check("import analisador_lexico", True)
         return module.AnalisadorLexo
     except Exception:
-        runner.check("import analisador_lexo", False, traceback.format_exc())
+        runner.check("import analisador_lexico", False, traceback.format_exc())
         return None
 
 

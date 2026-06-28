@@ -12,7 +12,12 @@ class GramaticaLivreDeContexto:
         if(not extender): self.GLC_exntedida = GramaticaLivreDeContexto(GLC_em_string, True)
         else: 
             #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
+            #gotos_LR0 formato eh (I_from, (simbolo, is_terminal), I_to) em dicionario {I_from: {simbolo..: I_to}}
             self.itens_LR0, self.gotos_LR0 = self.calcula_colecao_items_LR0()
+            
+            #tabela_SLR = action_table, goto_table
+            self.tabela_SLR = self.calcula_tabela_SLR()
+            pass
 
     def monta_GLC_obj(self, extender = False):
         cabecas = set()
@@ -172,11 +177,11 @@ class GramaticaLivreDeContexto:
             
             for i,item in enumerate(itens):
                 prods_aux = [x for x in item if not x.finalizo()]
-                simbolos = set([x.get_simbolo_atual().simbolo for x in prods_aux])
+                simbolos = set([(x.get_simbolo_atual().simbolo, x.get_simbolo_atual().is_terminal) for x in prods_aux])
                 
                 for s in simbolos:
                     novo_item = []
-                    for p in [x for x in prods_aux if x.get_simbolo_atual().simbolo == s]:    
+                    for p in [x for x in prods_aux if x.get_simbolo_atual().simbolo == s[0]]:    
                         novo_item.append(p.avanca_simbolo_atual())
                     
                     novo_item = self.calcula_closure(novo_item)
@@ -190,9 +195,92 @@ class GramaticaLivreDeContexto:
                         
                     #goto(I_from, Simbolo) = I_to
                     #i, s, id_novo_item = GOT(i, s) = id_novo_item
+                    # s = (simbolo, is_terminal), ex (A, false), (a, true)...
                     id_item_antigo = i
                     simbolo = s
                     if(id_item_antigo not in gotos.keys()): gotos[id_item_antigo] = {}
                     gotos[id_item_antigo][simbolo] = id_novo_item
         
         return itens, gotos
+    
+    #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
+    def calcula_tabela_SLR(self):
+        action_table = {}
+        goto_table = {}
+        
+        gotos_com_terminais = [(k1, k2, self.gotos_LR0[k1][k2]) for k1 in self.gotos_LR0.keys() for k2 in self.gotos_LR0[k1] if k2[1]]
+        gotos_com_nao_terminais = [(k1, k2, self.gotos_LR0[k1][k2]) for k1 in self.gotos_LR0.keys() for k2 in self.gotos_LR0[k1] if not k2[1]]
+        
+        
+        """ 
+            caso 1 SHIFT
+
+            pra cada GOTO com terminal:
+
+            GOTO(Ix, a) = Iy
+
+            onde a eh terminal:
+
+            ACTION[IX][a] = shift Iy 
+        """
+        
+        for g in gotos_com_terminais: 
+            if(g[0] not in action_table.keys()): action_table[g[0]] = {}
+            action_table[g[0]][g[1][0]] = f'shift I{g[2]}'
+    
+        """ 
+            caso 2 GOTO de nao terminal
+
+            pra cada GOTO com nao terminal:
+
+            GOTO(Ix, A) = Iy
+
+            onde A eh nao terminal:
+
+            GOTO_TABLE[Ix][A] = Iy 
+        """
+        
+        for g in gotos_com_nao_terminais: 
+            if(g[0] not in goto_table.keys()): goto_table[g[0]] = {}
+            goto_table[g[0]][g[1][0]] = f'I{g[2]}'
+            
+
+        """ 
+            case 3 REDUCE
+
+            pra cada item finalizado:
+
+            A ::= α ·
+
+            se A nao eh o inicial estendido:
+
+            pra cada x em FOLLOW(A):
+                ACTION[Ix][x] = reduce A ::= α 
+        """
+        
+        for item_id, i in enumerate(self.itens_LR0):
+            prods_finalizadas = [p for p in i if p.finalizo() and p.get_cabeca() != self.cabeca_inicial]
+            for pf in prods_finalizadas:
+                cabeca = pf.get_cabeca()
+                follows = self.follows[cabeca]
+                for f in follows:
+                    if(item_id not in action_table): action_table[item_id] = {}
+                    action_table[item_id][f] = f"reduce {pf.__str__(False)}"
+
+        """ 
+            caso 4 ACCEPT
+            Se: S' ::= S . então:
+            ACTION[I]["$"] = accept 
+        """
+            
+        prod_inicial= [p for i in self.itens_LR0 for p in i if p.get_cabeca() == self.cabeca_inicial][0]
+        prod_inicial_finalizada = prod_inicial.get_prod_finalizada()
+        itens_com_prod_inicial_finalizada = [i for i in self.itens_LR0 for p in i if str(prod_inicial_finalizada) == str(p)]
+
+        for i in itens_com_prod_inicial_finalizada:
+            if(i in self.itens_LR0):
+                id_item = self.itens_LR0.index(i)
+                if(id_item not in action_table): action_table[id_item] = {}
+                action_table[id_item]['$'] = 'accept'
+        
+        return action_table, goto_table

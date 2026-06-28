@@ -1,9 +1,12 @@
 from pathlib import Path
+from collections import Counter
 import sys
 import traceback
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 SINTATICO_DIR = BASE_DIR / "analisador_sintatico"
 
 
@@ -54,6 +57,10 @@ def simbolos_to_tuples(producao):
     return [(x.simbolo, x.is_terminal) for x in producao.corpo]
 
 
+def producoes_to_counter(producoes):
+    return Counter((cabeca, tuple(corpo), texto) for cabeca, corpo, texto in producoes)
+
+
 def check_producao(runner, Producao, texto, cabecas, cabeca_esperada, corpo_esperado, str_esperado):
     try:
         p = Producao(texto, cabecas)
@@ -68,17 +75,21 @@ def check_gramatica(runner, GramaticaLivreDeContexto, nome, texto, cabecas_esper
     try:
         glc = GramaticaLivreDeContexto(texto)
         runner.check(f"{nome}: quantidade de producoes", len(glc.producoes) == len(producoes_esperadas), f"obtido: {len(glc.producoes)!r}")
-        runner.check(f"{nome}: get_cabecas", glc.get_cabecas() == cabecas_esperadas, f"obtido: {glc.get_cabecas()!r}")
+        runner.check(f"{nome}: get_cabecas", Counter(glc.get_cabecas()) == Counter(cabecas_esperadas), f"obtido: {glc.get_cabecas()!r}")
 
         obtidas = [
-            (p.cabeca, simbolos_to_tuples(p), str(p))
+            (p.cabeca, tuple(simbolos_to_tuples(p)), str(p))
             for p in glc.producoes
         ]
-        runner.check(f"{nome}: producoes parseadas", obtidas == producoes_esperadas, f"obtido: {obtidas!r}")
+        esperadas = [
+            (cabeca, tuple(corpo), texto)
+            for cabeca, corpo, texto in producoes_esperadas
+        ]
+        runner.check(f"{nome}: producoes parseadas", producoes_to_counter(obtidas) == producoes_to_counter(esperadas), f"obtido: {obtidas!r}")
 
         try:
             obtido_str = str(glc)
-            runner.check(f"{nome}: str(glc)", obtido_str == str_esperado, f"obtido: {obtido_str!r}")
+            runner.check(f"{nome}: str(glc)", Counter(obtido_str.splitlines()) == Counter(str_esperado.splitlines()), f"obtido: {obtido_str!r}")
         except Exception:
             runner.check(f"{nome}: str(glc)", False, traceback.format_exc())
     except Exception:

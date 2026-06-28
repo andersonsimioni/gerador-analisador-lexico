@@ -3,7 +3,9 @@ import sys
 import traceback
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 AUTOMATO_DIR = BASE_DIR / "automato"
 
 
