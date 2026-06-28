@@ -10,8 +10,8 @@ class GramaticaLivreDeContexto:
         self.firsts = self.calcular_first()
         self.follows = self.calcular_follow()
         if(not extender): self.GLC_exntedida = GramaticaLivreDeContexto(GLC_em_string, True)
-        #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
         else: 
+            #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
             self.goto = {} #formato = [S' -> ·Sa] = I0
             self.itens_LR0 = self.calcula_colecao_items_LR0()
 
@@ -150,30 +150,33 @@ class GramaticaLivreDeContexto:
         
         return closure
     
+    def lr0_item_to_str(self, lr0_item): return "\n".join([str(x) for x in lr0_item])
+    
     #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
     def calcula_colecao_items_LR0(self):
         prod_inicial = [p for p in self.producoes if p.cabeca == self.cabeca_inicial][0]
         prod_inicial_closure = self.calcula_closure([prod_item_LR0.ProdItemLR0(prod_inicial, 0)])
         itens = [ prod_inicial_closure ]
         
-        #producoes apontam pra itens, ex: [S' -> ·Sa] = I0
-        map_lr0_prods_items = { str(k):0 for k in prod_inicial_closure }
+        #producoes apontam pra itens, ex: ["S' -> ·Sa"]=0 é "S' -> ·Sa" esta em I0
+        map_lr0_items = { self.lr0_item_to_str(k):0 for k in itens }
         
-        """ closure
-        goto/desvio
-        novos estados LR(0)
-        transições entre estados """
         mudou = True
         while mudou:
             mudou = False
             
             for i,item in enumerate(itens):
-                for p in [x for x in item if not x.finalizo()]:
+                prods_aux = [x for x in item if not x.finalizo()]
+                simbolos = set([x.get_simbolo_atual().simbolo for x in prods_aux])
+                
+                for s in simbolos:
+                    novo_item = []
+                    for p in [x for x in prods_aux if x.get_simbolo_atual().simbolo == s]:    
+                        novo_item.append(p.avanca_simbolo_atual())
                     
-                    avancado = p.avanca_simbolo_atual()
-                    if(str(avancado) not in map_lr0_prods_items):
-                        novo_item = [avancado]
-                        novo_item = self.calcula_closure(novo_item)
+                    novo_item = self.calcula_closure(novo_item)
+                    if(self.lr0_item_to_str(novo_item) not in map_lr0_items):
+                        map_lr0_items[self.lr0_item_to_str(novo_item)] = len(itens)
                         itens.append(novo_item)
                         mudou = True
                         
