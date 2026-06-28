@@ -112,7 +112,43 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 00 - terminal antes de terminal nao vira FOLLOW",
+        "debug 00 - GLC dificil com nullable em cadeia",
+        "\n".join([
+            "S ::= A B C d",
+            "S ::= E f",
+            "A ::= a A",
+            "A ::= &",
+            "B ::= b B",
+            "B ::= C D",
+            "B ::= &",
+            "C ::= c C",
+            "C ::= &",
+            "D ::= d D",
+            "D ::= &",
+            "E ::= A e",
+            "E ::= g",
+        ]),
+        {
+            "S": {"a", "b", "c", "d", "e", "g"},
+            "A": {"a", EPSILON},
+            "B": {"b", "c", "d", EPSILON},
+            "C": {"c", EPSILON},
+            "D": {"d", EPSILON},
+            "E": {"a", "e", "g"},
+        },
+        {
+            "S": {FIM},
+            "A": {"b", "c", "d", "e"},
+            "B": {"c", "d"},
+            "C": {"c", "d"},
+            "D": {"c", "d"},
+            "E": {"f"},
+        }
+    )
+
+    check_first_follow(
+        runner,
+        "debug 01 - terminal antes de terminal nao vira FOLLOW",
         "\n".join([
             "S ::= id = E",
             "E ::= id",
@@ -129,7 +165,7 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 01 - terminal simples nao pode virar chave de FOLLOW",
+        "debug 02 - terminal simples nao pode virar chave de FOLLOW",
         "\n".join([
             "S ::= a",
         ]),
@@ -143,7 +179,7 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 02 - alvo do FOLLOW precisa ser nao terminal",
+        "debug 03 - alvo do FOLLOW precisa ser nao terminal",
         "\n".join([
             "S ::= A b",
             "A ::= a",
@@ -160,7 +196,7 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 03 - epsilon nao pode virar chave de FOLLOW",
+        "debug 04 - epsilon nao pode virar chave de FOLLOW",
         "\n".join([
             "S ::= A B",
             "A ::= &",
@@ -180,7 +216,7 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 04 - terminal depois de nullable entra no anterior",
+        "debug 05 - terminal depois de nullable entra no anterior",
         "\n".join([
             "S ::= A B c",
             "A ::= a",
@@ -201,7 +237,7 @@ def run_first_follow_tests(runner):
 
     check_first_follow(
         runner,
-        "debug 05 - precisa olhar sufixo inteiro",
+        "debug 06 - precisa olhar sufixo inteiro",
         "\n".join([
             "S ::= A B C d",
             "A ::= a",

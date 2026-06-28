@@ -7,8 +7,14 @@ class GramaticaLivreDeContexto:
         self.GLC_em_string = GLC_em_string
         self.cabeca_inicial = None
         self.producoes = self.monta_GLC_obj(extender)
-        self.firsts = self.calcular_first()
-        self.follows = self.calcular_follow()
+        
+        #self.firsts = self.calcular_first()
+        #self.follows = self.calcular_follow()
+        self.firsts ={}
+        self.follows ={}
+        self.set_firsts()
+        self.set_follows()
+        
         if(not extender): self.GLC_exntedida = GramaticaLivreDeContexto(GLC_em_string, True)
         else: 
             #CHAMAR APENAS DENTRO DA GLC EXTENDIDA
@@ -48,7 +54,7 @@ class GramaticaLivreDeContexto:
     
     def __str__(self): return '\n'.join([str(x) for x in self.producoes])
     
-    def calcular_first(self):
+    """ def calcular_first(self):
         firsts = {k:set() for k in self.get_cabecas()}
         
         mudou = True
@@ -136,7 +142,103 @@ class GramaticaLivreDeContexto:
                     
                     if(definicoes.EPISLON not in self.firsts[simbolo]): break
         
+        return follows """
+    
+    def get_firsts_by_head(self, head:str):
+        productions = self.grammar.get_productions_by_head(head)
+        firsts = []
+        for p in productions:
+            i = 0
+            while True:
+                first_symbol = p.body[i]
+                if not first_symbol.isupper():
+                    firsts.append(first_symbol)
+                    break
+                else:
+                    firsts.extend(self.get_firsts_by_head(first_symbol))
+                    if self.grammar.has_epsolon_productions_by_head(first_symbol) and i < (len(p.body) - 1):
+                        firsts.remove(definicoes.EPISLON)
+                        i += 1
+                    else:
+                        break
+        firsts = list(set(firsts))
+        return firsts
+    
+    def set_firsts(self):
+        dict_prd: dict[str, list[Production]] = {}
+        
+        for p in self.grammar.productions:
+            if not p.head in dict_prd:
+                dict_prd[p.head] = []
+                
+            dict_prd[p.head].append(p)
+            
+        for head in dict_prd.keys():
+            firsts = self.get_firsts_by_head(head)
+            if not head in self.firsts:
+                self.firsts[head] = set()
+            self.firsts[head].update(firsts)
+    
+    def get_follows_by_head(self, symbol:str):
+        all_productions = self.grammar.get_productions_with_symbol_on_body(symbol)
+        productions = [x for x in all_productions if x.head != symbol]
+        
+        follows = []
+        if symbol == self.grammar.start_symbol:
+            follows.append('$')
+
+        for p in productions:
+            index_list = [i for i,x in enumerate(p.body) if x == symbol]
+            for i in index_list:
+                if i < (len(p.body) - 1): # αBβ
+                    next_symbol = p.body[i+1]
+                    if not next_symbol.isupper():
+                        follows.append(next_symbol)
+                    elif definicoes.EPISLON in self.firsts[next_symbol]:
+                        #  Se A ::= αB (ou A ::= αBβ, onde ε ∈ FIRST(β)) ∈ P, 
+                        #  então adicione FOLLOW(A) em FOLLOW(B)
+                        follows.extend([x for x in self.firsts[next_symbol] if x != definicoes.EPISLON])
+                        i2 = i+2 # simbolo depois do proximo
+                        while True:
+                            # ex de caso: B ::= ACd , d seria o next do next
+                            if i2 > len(p.body) - 1:
+                                follows_head = []
+                                if not p.head in self.follows: 
+                                    follows_head = self.get_follows_by_head(p.head)
+                                else:
+                                    follows_head = list(self.follows[p.head])
+                                follows.extend(follows_head)
+                                break
+                            else:
+                                next_symbol2 = p.body[i2]
+                                if not next_symbol2.isupper():
+                                    follows.append(next_symbol2)
+                                    break;
+                                elif definicoes.EPISLON in self.firsts[next_symbol2]:
+                                    i2 += 1
+                                    
+                    # Se A ::= αBβ ∈ P e β != ε, 
+                    # então adicione FIRST(β) em  FOLLOW(B)
+                    else:
+                        follows.extend(self.firsts[next_symbol])
+                else: # αB
+                    follows_head = []
+                    if not p.head in self.follows: 
+                        follows_head = self.get_follows_by_head(p.head)
+                    else:
+                        follows_head = list(self.follows[p.head])
+                    follows.extend(follows_head)
+            
         return follows
+    
+    def set_follows(self):
+        symbols = set()
+        for p in self.grammar.productions:
+            symbols.add(p.head)
+        
+        for s in symbols:
+            follows = self.get_follows_by_head(s)
+            self.follows[s] = set(follows)
     
     def calcula_closure(self, lr0_item_prods):
         closure = [] + lr0_item_prods
