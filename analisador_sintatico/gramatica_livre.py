@@ -226,7 +226,7 @@ class GramaticaLivreDeContexto:
         
         for g in gotos_com_terminais: 
             if(g[0] not in action_table.keys()): action_table[g[0]] = {}
-            action_table[g[0]][g[1][0]] = f'shift I{g[2]}'
+            action_table[g[0]][g[1][0]] = ('shift', g[2]) #f'shift I{g[2]}'
     
         """ 
             caso 2 GOTO de nao terminal
@@ -242,7 +242,7 @@ class GramaticaLivreDeContexto:
         
         for g in gotos_com_nao_terminais: 
             if(g[0] not in goto_table.keys()): goto_table[g[0]] = {}
-            goto_table[g[0]][g[1][0]] = f'I{g[2]}'
+            goto_table[g[0]][g[1][0]] = g[2] #f'I{g[2]}'
             
 
         """ 
@@ -265,7 +265,7 @@ class GramaticaLivreDeContexto:
                 follows = self.follows[cabeca]
                 for f in follows:
                     if(item_id not in action_table): action_table[item_id] = {}
-                    action_table[item_id][f] = f"reduce {pf.__str__(False)}"
+                    action_table[item_id][f] = ('reduce', pf) #f"reduce {pf.__str__(False)}"
 
         """ 
             caso 4 ACCEPT
@@ -281,6 +281,6 @@ class GramaticaLivreDeContexto:
             if(i in self.itens_LR0):
                 id_item = self.itens_LR0.index(i)
                 if(id_item not in action_table): action_table[id_item] = {}
-                action_table[id_item]['$'] = 'accept'
+                action_table[id_item]['$'] = ('accept', None)
         
         return action_table, goto_table
