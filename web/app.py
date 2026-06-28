@@ -1,7 +1,14 @@
 from flask import Flask, render_template, request
-from src.automata import build_dfa_from_regex
-from src.regex_parser import parse_definitions_text
 from graphviz import Digraph
+from pathlib import Path
+import sys
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+AUTOMATO_DIR = BASE_DIR / "automato"
+sys.path.insert(0, str(BASE_DIR))
+sys.path.insert(0, str(AUTOMATO_DIR))
+
+from automato import Automato
 
 app = Flask(__name__)
 
@@ -28,9 +35,9 @@ def index():
 
         automata = []
 
-        for definition in definitions:
-            automaton = build_dfa_from_regex(definition)
-            automata.append((definition.name, automaton))
+        for name, regex in definitions:
+            automaton = Automato.parse_regex(regex)
+            automata.append((name, automaton))
 
         for name, automaton in automata:
             automata_svgs.append(
@@ -45,7 +52,7 @@ def index():
                 continue
 
             result.append(
-                (text, "accepted" if main_automaton.accepts(text) else "rejected")
+                (text, "accepted" if main_automaton.reconhece(text) else "rejected")
             )
 
     return render_template(
@@ -53,6 +60,21 @@ def index():
         result=result,
         automata_svgs=automata_svgs
     )
+
+def parse_definitions_text(content):
+    definitions = []
+    
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        
+        partes = line.split(":", 1)
+        name = partes[0].strip()
+        regex = partes[1].strip()
+        definitions.append((name, regex))
+        
+    return definitions
  
 def automaton_to_svg(automaton, name=""):
     dot = Digraph()
@@ -62,14 +84,15 @@ def automaton_to_svg(automaton, name=""):
     dot.attr(fontsize="16")
 
     dot.node("start", shape="none")
-    dot.edge("start", automaton.initial_state)
+    estado_inicial = [x for x in automaton.estados.keys() if automaton.estados[x].inicial][0]
+    dot.edge("start", estado_inicial)
 
-    for state_name, state in automaton.states.items():
-        shape = "doublecircle" if state.is_final else "circle"
+    for state_name, state in automaton.estados.items():
+        shape = "doublecircle" if state.final else "circle"
         dot.node(state_name, state_name, shape=shape)
 
-    for t in automaton.transitions:
-        dot.edge(t.source, t.target, label=t.symbol)
+    for t in automaton.get_TODAS_transicoes():
+        dot.edge(t.estado_origem.nome, t.estado_destino.nome, label=t.simbolo)
 
     return dot.pipe(format="svg").decode("utf-8")
 
