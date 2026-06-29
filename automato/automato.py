@@ -260,3 +260,118 @@ class Automato:
         for k in _estados.keys(): AF.add_estado(_estados[k])
         
         return AF
+    
+    def epsilon_fecho(AFN):
+        epsilon_fecho = {}
+        
+        grafo_epsilon = {}
+        for estado in AFN.estados:
+            grafo_epsilon[estado] = []
+            
+        for estado in AFN.estados:
+            transicoes = estado.get_transicoes()
+            for transicao in transicoes:
+                estado_origem = transicao.estado_origem
+                estado_destino = transicao.estado_destino
+                simbolo = transicao.simbolo
+                
+                if (simbolo == "&"):
+                    grafo_epsilon[estado_origem].append(estado_destino)
+
+        for estado_origem in AFN.estados:
+            visitados = [] 
+            fila = []      
+            
+            fila.append(estado_origem)
+            visitados.append(estado_origem)
+            
+            while (len(fila) > 0):
+                fonte = fila[0]
+                fila.pop(0)
+                
+                for vizinho in grafo_epsilon[fonte]:
+                    if vizinho not in visitados:
+                        visitados.append(vizinho)
+                        fila.append(vizinho)            
+            epsilon_fecho[estado_origem] = visitados
+        return epsilon_fecho
+
+
+    def determinization(self, AFN):
+        epsilon_fecho_local = self.epsilon_fecho(AFN)
+        
+        alfabeto = []
+        for est in AFN.estados.values():
+            for simbolo in est.transicoes.keys():
+                if simbolo != "&" and simbolo not in alfabeto:
+                    alfabeto.append(simbolo)
+        alfabeto.sort()
+
+        AFD = Automato(f"AFD_de_{AFN.nome}")
+        
+        # Função auxiliar para gerar um nome único para os novos estados agrupados
+        def gerar_nome(lista_estados):
+            nomes = [e.nome for e in lista_estados]
+            nomes.sort()
+            return "-".join(nomes)
+
+        estado_inicial_afn = AFN.get_inicial()
+        estados_do_novo_inicial = epsilon_fecho_local[estado_inicial_afn]
+        
+        nome_inicial = gerar_nome(estados_do_novo_inicial)
+        is_final = any([e.final for e in estados_do_novo_inicial])
+        
+        novo_inicial = estado.Estado(nome_inicial, True, is_final)
+        AFD.add_estado(novo_inicial)
+
+        composicao_estados = {nome_inicial: estados_do_novo_inicial}
+        
+        fila = [nome_inicial]
+        visitados = [nome_inicial]
+        
+        while len(fila) > 0:
+            atual_nome = fila[0]
+            fila.pop(0)
+            
+            estados_afn_atuais = composicao_estados[atual_nome]
+            estado_afd_atual = AFD.estados[atual_nome]
+            
+            for simbolo in alfabeto:
+                alcançados_direto = []
+                
+                for nfa_state in estados_afn_atuais:
+                    transicoes_pelo_simbolo = nfa_state.transicoes.get(simbolo, [])
+                    for t in transicoes_pelo_simbolo:
+                        if t.estado_destino not in alcançados_direto:
+                            alcançados_direto.append(t.estado_destino)
+                
+                if len(alcançados_direto) == 0:
+                    continue 
+                
+                #Fecho-Epsilon dos alcançados
+                novo_conjunto_nfa = []
+                for dest in alcançados_direto:
+                    for e in epsilon_fecho_local[dest]:
+                        if e not in novo_conjunto_nfa:
+                            novo_conjunto_nfa.append(e)
+                
+                novo_nome = gerar_nome(novo_conjunto_nfa)
+                
+                if novo_nome not in AFD.estados:
+                    is_f = any([e.final for e in novo_conjunto_nfa])
+                    novo_estado_afd = estado.Estado(novo_nome, False, is_f)
+                    AFD.add_estado(novo_estado_afd)
+                    composicao_estados[novo_nome] = novo_conjunto_nfa
+                    
+                    if novo_nome not in visitados:
+                        visitados.append(novo_nome)
+                        fila.append(novo_nome)
+                
+                #Cria a nova transição no AFD
+                t_nova = transicao.Transicao(estado_afd_atual, AFD.estados[novo_nome], simbolo)
+                estado_afd_atual.add_transicao(t_nova)
+
+        return AFD
+
+
+

@@ -1,4 +1,4 @@
-import transicao
+from transicao import Transicao
 import definicoes
 
 PATTERN_CACHE = {}
