@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import tempfile
 import traceback
 
 
@@ -21,6 +22,16 @@ class TestRunner:
         if condition:
             self.passed += 1
             print(f"[OK] {name}")
+            return
+
+        print(f"[FALHOU] {name}")
+        if details:
+            print(details)
+
+    def check_silent(self, name, condition, details=""):
+        self.total += 1
+        if condition:
+            self.passed += 1
             return
 
         print(f"[FALHOU] {name}")
@@ -170,7 +181,92 @@ def check_tabela_tokens(runner, analisador):
         runner.check("get_tabela_tokens(exemplos/lexico_misto.txt)", False, traceback.format_exc())
 
 
-def run_tests(runner, analisador):
+def criar_analisador_temp(AnalisadorLexo, definicoes):
+    arquivo = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
+    arquivo.write(definicoes)
+    arquivo.close()
+    return AnalisadorLexo(arquivo.name)
+
+
+def gerar_palavras_pesadas():
+    palavras = []
+
+    bases = ["a", "b", "ab", "ba", "abc", "teste", "Alpha", "Z", "xYz", "var"]
+    sufixos = ["", "0", "1", "12", "999", "abc", "_", "_x", "x_y", "123abc"]
+
+    for base in bases:
+        for sufixo in sufixos:
+            palavras.append(base + sufixo)
+            palavras.append(sufixo + base)
+
+    for i in range(250):
+        palavras.append(str(i))
+        palavras.append(f"{i}.{i + 1}")
+        palavras.append(f"0x{i:x}")
+        palavras.append("0b" + bin(i % 128)[2:])
+
+    for i in range(150):
+        meio = "ab" * (i % 12)
+        palavras.append(meio + "abb")
+        palavras.append(meio + "aba")
+        palavras.append("a" * (i % 20))
+        palavras.append("b" * (i % 20))
+
+    for i in range(100):
+        palavras.append(f"a{i}@b{i}.c")
+        palavras.append(f"abc{i}@def{i}.com")
+        palavras.append(f"abc{i}@def")
+        palavras.append(f"abc@def{i}.com")
+
+    palavras.extend([
+        "a*b", "(ab)", "[a-z]", "+", "*", "|", "=", "==", "===",
+        "0x", "0xg", "0b102", "12.", ".12", "_abc", "_", "",
+    ])
+
+    return palavras
+
+
+def check_regex_com_espacos(runner, AnalisadorLexo):
+    print("\n== Regex com espacos internos ==")
+
+    definicoes_com_espacos = "\n".join([
+        "id: [a-zA-Z] ( [a-zA-Z] | [0-9] ) *",
+        "num: [1-9] ( [0-9] ) * | 0",
+        "float: [0-9] [0-9] * \\. [0-9] [0-9] *",
+        "hex: 0x [0-9a-fA-F] [0-9a-fA-F] *",
+        "bin_prefix: 0b ( 0 | 1 ) ( 0 | 1 ) *",
+        "email: [a-z] [a-z] * @ [a-z] [a-z] * \\. [a-z] [a-z] *",
+        "ab_final: ( a | b ) * a b b",
+        "literal_star: a \\* b",
+        "literal_paren: \\( a b \\)",
+    ])
+
+    definicoes_sem_espacos = definicoes_com_espacos.replace(" ", "")
+
+    try:
+        analisador_com_espacos = criar_analisador_temp(AnalisadorLexo, definicoes_com_espacos)
+        analisador_sem_espacos = criar_analisador_temp(AnalisadorLexo, definicoes_sem_espacos)
+        runner.check("monta analisador com regex espacadas", True)
+    except Exception:
+        runner.check("monta analisador com regex espacadas", False, traceback.format_exc())
+        return
+
+    palavras = gerar_palavras_pesadas()
+
+    for i, palavra in enumerate(palavras[:1000]):
+        try:
+            esperado = get_classes(analisador_sem_espacos, palavra)
+            obtido = get_classes(analisador_com_espacos, palavra)
+            runner.check_silent(
+                f"regex espacada stress {i:04d} {palavra!r}",
+                obtido == esperado,
+                f"obtido: {obtido!r}\nesperado: {esperado!r}"
+            )
+        except Exception:
+            runner.check_silent(f"regex espacada stress {i:04d} {palavra!r}", False, traceback.format_exc())
+
+
+def run_tests(runner, analisador, AnalisadorLexo):
     print("\n== Definicoes carregadas ==")
     esperadas = [
         "keyword_if", "keyword_else", "keyword_while", "bool",
@@ -261,6 +357,7 @@ def run_tests(runner, analisador):
         check_classes(runner, analisador, palavra, classes)
 
     check_tabela_tokens(runner, analisador)
+    check_regex_com_espacos(runner, AnalisadorLexo)
 
 
 def main():
@@ -276,7 +373,7 @@ def main():
 
     analisador = build_analisador(runner, AnalisadorLexo)
     if analisador is not None:
-        run_tests(runner, analisador)
+        run_tests(runner, analisador, AnalisadorLexo)
 
     runner.summary()
 

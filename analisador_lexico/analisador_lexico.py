@@ -22,6 +22,7 @@ class AnalisadorLexo:
                 if(classe.endswith(' ')): classe = classe[:-1]
                 regex= aux[separador+1:]
                 if(regex.startswith(' ')): regex = regex[1:]
+                regex = regex.replace(" ", "")
                 self.definicoes_regulares[classe] = automato.automato.Automato.parse_regex(regex)
                 continue
 
