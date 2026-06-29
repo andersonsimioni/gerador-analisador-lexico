@@ -219,56 +219,61 @@ class GramaticaLivreDeContexto:
     def get_follows_by_head(self, symbol:str):
         #trava anti recursao
         if symbol in self._follows_stack: return []
-
         self._follows_stack.add(symbol)
+        
         grammar = self._wrap_grammar_api()
         all_productions = grammar.get_productions_with_symbol_on_body(symbol)
         productions = all_productions
         
         follows = []
+        #  Se S é o símbolo inicial da gramática, então $ ∈ FOLLOW(S)
         if symbol == grammar.start_symbol:
             follows.append('$')
 
         for p in productions:
-            index_list = [i for i,x in enumerate(p.body) if x == symbol]
-            for i in index_list:
-                if i < (len(p.body) - 1): # αBβ
-                    next_symbol = p.body[i+1]
-                    if not next_symbol.isupper():
-                        follows.append(next_symbol)
-                    elif definicoes.EPISLON in self.firsts[next_symbol]:
-                        #  Se A ::= αB (ou A ::= αBβ, onde ε ∈ FIRST(β)) ∈ P, 
-                        #  então adicione FOLLOW(A) em FOLLOW(B)
-                        follows.extend([x for x in self.firsts[next_symbol] if x != definicoes.EPISLON])
-                        i2 = i+2 # simbolo depois do proximo
+            # posicoes_simbolo_no_corpo_da_producao = é os índices de onde está o simbolo no corpo da produção (pra poder saber se está no final, no início, etc)
+            posicoes_simbolo_no_corpo_da_producao = [i for i,x in enumerate(p.body) if x == symbol] 
+            for i in posicoes_simbolo_no_corpo_da_producao: # varre todas as posições onde está o simbolo no corpo da produção atual
+                if i < (len(p.body) - 1): # αBβ --> então tem um símbolo depois dele
+                    proximo_simbolo = p.body[i+1] # proximo_simbolo = β (Betha)
+                    if not proximo_simbolo.isupper(): # entao é terminal --> Ex:  αBc -> c é o terminal depois de B
+                        follows.append(proximo_simbolo) # adiciona o não-terminal direto
+                    elif definicoes.EPISLON in self.firsts[proximo_simbolo]: # ε ∈ β
+                        # ε ∈ β, mas os first β ainda entra nos follows, porem precisamos 
+                        # verificar o proximo simbolo pq ele tambem entrará nos follows de símbolo atual
+                        follows.extend([x for x in self.firsts[proximo_simbolo] if x != definicoes.EPISLON])
+                        i2 = i+2 # índice do simbolo depois do proximo
                         while True:
-                            # ex de caso: B ::= ACd , d seria o next do next
-                            if i2 > len(p.body) - 1:
+                            #  Se A ::= αB (ou A ::= αBβ, onde ε ∈ FIRST(β)) ∈ P, 
+                            #  então adicione FOLLOW(A) em FOLLOW(B)
+                            if i2 > len(p.body) - 1: # não tem próximo do próximo_simbolo (ou seja, próximo_simbolo era o último)
                                 follows_head = []
-                                if not p.head in self.follows: 
-                                    follows_head = self.get_follows_by_head(p.head)
+                                if not p.head in self.follows: # se ainda nao foi calculado os follows da cabeça, entao calculará
+                                    follows_head = self.get_follows_by_head(p.head) # calcula os follows da cabeça
                                 else:
-                                    follows_head = list(self.follows[p.head])
-                                follows.extend(follows_head)
-                                break
-                            else:
-                                next_symbol2 = p.body[i2]
-                                if not next_symbol2.isupper():
-                                    follows.append(next_symbol2)
+                                    follows_head = list(self.follows[p.head]) # só transforma em lista
+                                follows.extend(follows_head) # Ex: FOLLOW(A) em FOLLOW(B) | A = cabeça da produção e B = symbol
+                                break 
+                            else: # há próximo simbolo, ex: B ::= ACβd
+                                proximo_simbolo2 = p.body[i2]
+                                if not proximo_simbolo2.isupper(): # se o proximo simbolo for terminal, adiciona nos follows e acaba por aí
+                                    follows.append(proximo_simbolo2)
                                     break;
-                                elif definicoes.EPISLON in self.firsts[next_symbol2]:
-                                    follows.extend([x for x in self.firsts[next_symbol2] if x != definicoes.EPISLON])
+                                # se é não-terminal, e ainda contém & entao faz o mesmo processo
+                                # add os firsts desse simbolo (i2) [sem &] nos follows e procura pelo proximo simbolo
+                                elif definicoes.EPISLON in self.firsts[proximo_simbolo2]: 
+                                    follows.extend([x for x in self.firsts[proximo_simbolo2] if x != definicoes.EPISLON])
                                     i2 += 1
-                                else:
-                                    follows.extend(self.firsts[next_symbol2])
+                                else: # se nao tem &, entao só add os firsts e para de ir para o proximo simbolo
+                                    follows.extend(self.firsts[proximo_simbolo2])
                                     break
                                     
                     # Se A ::= αBβ ∈ P e β != ε, 
                     # então adicione FIRST(β) em  FOLLOW(B)
                     else:
-                        follows.extend(self.firsts[next_symbol])
-                else: # αB
-                    follows_head = []
+                        follows.extend(self.firsts[proximo_simbolo]) # proximo_simbolo = β
+                else: # αB  --> nao há proximo_simbolo
+                    follows_head = [] # mesmo processo -->   FOLLOW(A) em FOLLOW(B) | A = cabeça da produção e B = symbol
                     if not p.head in self.follows: 
                         follows_head = self.get_follows_by_head(p.head)
                     else:

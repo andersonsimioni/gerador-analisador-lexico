@@ -20,7 +20,7 @@ dist/
 .coverage
 coverage.xml
 htmlcov/
-
+old-my
 # Python packaging and tools
 Pipfile.lock
 poetry.lock
