@@ -188,6 +188,35 @@ def criar_analisador_temp(AnalisadorLexo, definicoes):
     return AnalisadorLexo(arquivo.name)
 
 
+def criar_arquivo_temp(conteudo):
+    arquivo = tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8")
+    arquivo.write(conteudo)
+    arquivo.close()
+    return arquivo.name
+
+
+def check_palavras_reservadas(runner, AnalisadorLexo):
+    print("\n== Palavras reservadas ==")
+
+    definicoes = criar_arquivo_temp("id:[a-zA-Z][a-zA-Z]*\n")
+    reservadas = criar_arquivo_temp("if\nelse\nwhile\ntrue:bool\n")
+    palavras = criar_arquivo_temp("if\nabc\nelse\nwhile\ntrue\n")
+
+    try:
+        analisador = AnalisadorLexo(definicoes, reservadas)
+        esperado = "\n".join([
+            "<if,PR>",
+            "<id,5>",
+            "<else,PR>",
+            "<while,PR>",
+            "<true,bool>",
+        ])
+        obtido = analisador.get_tabela_tokens(palavras)
+        runner.check("reservada sem ':' vira PR e com ':' respeita classe", obtido == esperado, f"obtido:\n{obtido!r}\n\nesperado:\n{esperado!r}")
+    except Exception:
+        runner.check("reservada sem ':' vira PR e com ':' respeita classe", False, traceback.format_exc())
+
+
 def gerar_palavras_pesadas():
     palavras = []
 
@@ -357,6 +386,7 @@ def run_tests(runner, analisador, AnalisadorLexo):
         check_classes(runner, analisador, palavra, classes)
 
     check_tabela_tokens(runner, analisador)
+    check_palavras_reservadas(runner, AnalisadorLexo)
     check_regex_com_espacos(runner, AnalisadorLexo)
 
 

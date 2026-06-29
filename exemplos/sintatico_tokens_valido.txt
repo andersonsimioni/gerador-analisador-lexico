@@ -3,7 +3,7 @@
 <12,num>
 <*,op_star>
 <(,lparen>
-<true,bool>
+<id,2>
 <+,op_plus>
 <0xff,hex>
 <),rparen>

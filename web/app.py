@@ -59,11 +59,11 @@ DEFAULT_SYNTACTIC_TOKENS = """<x,id>
 <*,op_times>
 <z,id>"""
 
-DEFAULT_RESERVED_WORDS = """if:keyword_if
-else:keyword_else
-while:keyword_while
-true:bool
-false:bool"""
+DEFAULT_RESERVED_WORDS = """if
+else
+while
+true
+false"""
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -404,6 +404,9 @@ def format_tabela_simbolos(tabela_simbolos):
     linhas = []
 
     for i, (lexema, token) in enumerate(tabela_simbolos.items(), start=1):
+        if(isinstance(token, int)):
+            token = "id"
+
         linhas.append({
             "linha": i,
             "lexema": lexema,

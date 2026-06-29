@@ -40,7 +40,7 @@ class AnalisadorLexo:
                     classe = classe.strip()
                 else:
                     palavra = aux
-                    classe = f"keyword_{palavra}"
+                    classe = "PR"
 
                 self.palavras_reservadas[palavra] = classe
                 self.tabela_simbolos[palavra] = classe
