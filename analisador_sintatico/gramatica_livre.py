@@ -169,15 +169,12 @@ class GramaticaLivreDeContexto:
                 return [p for p in self.productions if p.head == head]
             def get_productions_with_symbol_on_body(self, symbol):
                 return [p for p in self.productions if symbol in p.body]
-            def has_epsolon_productions_by_head(self, head):
-                return any(p.head == head and definicoes.EPISLON in p.body for p in self.productions)
-
         return GrammarWrapper()
     
     def get_firsts_by_head(self, head:str):
         if head in self._firsts_stack: return []
-
         self._firsts_stack.add(head)
+        
         grammar = self._wrap_grammar_api()
         productions = grammar.get_productions_by_head(head)
         firsts = []
@@ -185,17 +182,29 @@ class GramaticaLivreDeContexto:
             i = 0
             while True:
                 first_symbol = p.body[i]
-                if not first_symbol.isupper():
+                # Se X ∈ T então FIRST(X) ={X}
+                if not first_symbol.isupper(): # se o 1° simbolo eh terminal, entao só ele é o first 
                     firsts.append(first_symbol)
                     break
+                #  Se X ∈ N então
                 else:
-                    firsts.extend(self.get_firsts_by_head(first_symbol))
-                    if grammar.has_epsolon_productions_by_head(first_symbol) and i < (len(p.body) - 1):
-                        if definicoes.EPISLON in firsts:
+                    firsts_first_symbol = [] # firsts do primeiro simbolo
+                    if not first_symbol in self.firsts: # se os firsts desse primeiro simbolo ainda nao foi calculado, entao calcula
+                        firsts_first_symbol = self.get_firsts_by_head(first_symbol)
+                    else: # se os firsts desse primeiro simbolo ja foi calculado, entao só add nos firsts_first_symbol
+                        firsts_first_symbol = self.firsts[first_symbol]
+                    
+                    # adiciona os firsts do primeiro simbolo nos firsts do head
+                    firsts.extend(firsts_first_symbol)
+                    # se ε ∈ FIRST(B), mas B ainda nao é o ultimo simbolo do corpo entao
+                    # ainda nao ha ε nos FIRST(A) [considerando A = cabeça da produção]
+                    if (definicoes.EPISLON in firsts_first_symbol) and (i < (len(p.body) - 1)):
+                        if definicoes.EPISLON in firsts: # se tiver ε nos FIRST(A), entao remove, pq ainda tem o proximo simbolo
                             firsts.remove(definicoes.EPISLON)
-                        i += 1
+                        i += 1 # vai para o proximo simbolo
                     else:
                         break
+        # faz um set para nao ter repeticao de simbolos nos firsts da cabeca
         firsts = list(set(firsts))
         self._firsts_stack.remove(head)
         return firsts
