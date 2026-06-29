@@ -1,0 +1,5 @@
+﻿<while,PR>
+<id,4>
+<==,op_eq>
+<10,num>
+<),rparen>

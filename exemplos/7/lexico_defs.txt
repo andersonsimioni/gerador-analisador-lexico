@@ -1,0 +1,4 @@
+﻿email:[a-z][a-z]*@[a-z][a-z]*\.[a-z][a-z]*
+id:[a-zA-Z]([a-zA-Z]|[0-9])*
+op_send:->
+semicolon:;

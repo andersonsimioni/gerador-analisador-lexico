@@ -1,0 +1,7 @@
+﻿Expr ::= Expr op_plus Termo
+Expr ::= Termo
+Termo ::= Termo op_star Fator
+Termo ::= Fator
+Fator ::= lparen Expr rparen
+Fator ::= id
+Fator ::= num

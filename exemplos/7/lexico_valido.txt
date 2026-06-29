@@ -1,0 +1,3 @@
+﻿send
+abc@def.com
+;

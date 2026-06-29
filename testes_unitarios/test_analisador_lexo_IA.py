@@ -9,7 +9,7 @@ if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 AUTOMATO_DIR = BASE_DIR / "automato"
 ANALISADOR_DIR = BASE_DIR / "analisador_lexico"
-EXEMPLOS_DIR = BASE_DIR / "exemplos"
+EXEMPLOS_DIR = BASE_DIR / "exemplos" / "1"
 
 
 class TestRunner:
@@ -68,10 +68,10 @@ def build_analisador(runner, AnalisadorLexo):
 
     try:
         analisador = AnalisadorLexo(str(path_definicoes))
-        runner.check("AnalisadorLexo(exemplos/lexico_defs.txt)", True)
+        runner.check("AnalisadorLexo(exemplos/1/lexico_defs.txt)", True)
         return analisador
     except Exception:
-        runner.check("AnalisadorLexo(exemplos/lexico_defs.txt)", False, traceback.format_exc())
+        runner.check("AnalisadorLexo(exemplos/1/lexico_defs.txt)", False, traceback.format_exc())
         return None
 
 
@@ -176,9 +176,9 @@ def check_tabela_tokens(runner, analisador):
 
     try:
         obtido = analisador.get_tabela_tokens(str(path_palavras))
-        runner.check("get_tabela_tokens(exemplos/lexico_misto.txt)", obtido == esperado, f"obtido:\n{obtido!r}\n\nesperado:\n{esperado!r}")
+        runner.check("get_tabela_tokens(exemplos/1/lexico_misto.txt)", obtido == esperado, f"obtido:\n{obtido!r}\n\nesperado:\n{esperado!r}")
     except Exception:
-        runner.check("get_tabela_tokens(exemplos/lexico_misto.txt)", False, traceback.format_exc())
+        runner.check("get_tabela_tokens(exemplos/1/lexico_misto.txt)", False, traceback.format_exc())
 
 
 def criar_analisador_temp(AnalisadorLexo, definicoes):

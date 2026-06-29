@@ -1,0 +1,2 @@
+﻿Loop ::= PR lparen Cond rparen
+Cond ::= id op_eq num

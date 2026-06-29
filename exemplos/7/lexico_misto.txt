@@ -1,0 +1,6 @@
+﻿send
+mail
+abc@def.com
+abc@def
+;
+->

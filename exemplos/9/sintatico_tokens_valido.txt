@@ -1,0 +1,5 @@
+﻿<[,lbracket>
+<id,3>
+<],rbracket>
+<|,op_pipe>
+<id,4>

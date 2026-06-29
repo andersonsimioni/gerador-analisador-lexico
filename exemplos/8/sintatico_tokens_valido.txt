@@ -1,0 +1,5 @@
+﻿<abc_def,snake_id>
+<:=,op_assign>
+<10,num>
+<+,op_plus>
+<x_y,snake_id>

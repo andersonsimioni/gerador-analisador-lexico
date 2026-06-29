@@ -1,0 +1,4 @@
+﻿<id,3>
+<:=,op_assign>
+<10,num>
+<;,semicolon>

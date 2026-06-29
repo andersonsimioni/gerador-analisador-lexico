@@ -1,0 +1,7 @@
+﻿<(,lparen>
+<id,3>
+<+,op_plus>
+<5,num>
+<),rparen>
+<-,op_minus>
+<id,4>

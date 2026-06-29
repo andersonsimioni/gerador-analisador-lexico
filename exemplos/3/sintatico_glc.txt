@@ -1,0 +1,3 @@
+﻿Cmd ::= id op_assign Valor semicolon
+Valor ::= id
+Valor ::= num

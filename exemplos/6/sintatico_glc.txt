@@ -1,0 +1,4 @@
+﻿Expr ::= Valor op_plus Valor
+Valor ::= hex
+Valor ::= bin_prefix
+Valor ::= num

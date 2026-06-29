@@ -1,0 +1,5 @@
+﻿id:[a-zA-Z]([a-zA-Z]|[0-9])*
+lbracket:\[
+rbracket:\]
+op_pipe:\|
+literal_range:\[a-z\]

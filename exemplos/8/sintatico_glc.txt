@@ -1,0 +1,5 @@
+﻿Atrib ::= snake_id op_assign Expr
+Expr ::= Expr op_plus Valor
+Expr ::= Valor
+Valor ::= snake_id
+Valor ::= num

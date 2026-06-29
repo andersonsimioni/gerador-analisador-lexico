@@ -1,0 +1,4 @@
+﻿Cond ::= PR id Rel num
+Rel ::= op_eq
+Rel ::= op_gt
+Rel ::= op_lt

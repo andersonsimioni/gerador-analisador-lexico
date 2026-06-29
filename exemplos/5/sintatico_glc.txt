@@ -1,0 +1,6 @@
+﻿Expr ::= Expr op_plus Termo
+Expr ::= Expr op_minus Termo
+Expr ::= Termo
+Termo ::= lparen Expr rparen
+Termo ::= id
+Termo ::= num

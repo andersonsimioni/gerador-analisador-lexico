@@ -1,0 +1,3 @@
+﻿<send,PR>
+<abc@def.com,email>
+<;,semicolon>

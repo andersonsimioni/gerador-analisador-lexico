@@ -1,0 +1,4 @@
+﻿snake_id:[a-zA-Z]([a-zA-Z]|[0-9]|_)*
+num:[0-9][0-9]*
+op_assign:=
+op_plus:\+
