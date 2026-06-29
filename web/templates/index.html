@@ -20,6 +20,33 @@
         .form-error { display: none; margin-top: 12px; }
         .lr0-lines { margin-top: 8px; overflow-x: auto; }
         .lr0-line { font-family: Consolas, monospace; font-size: 14px; white-space: nowrap; }
+
+        /* ── Tabela Léxica ── */
+        .tabela-lexica-wrapper { overflow-x: auto; }
+        .tabela-lexica { font-family: Consolas, monospace; font-size: 13px; white-space: nowrap; }
+        .tabela-lexica thead th {
+            background: #0f172a;
+            color: #f8fafc;
+            text-align: center;
+            padding: 6px 10px;
+            position: sticky;
+            top: 0;
+        }
+        .tabela-lexica thead th:first-child { text-align: left; min-width: 160px; }
+        .tabela-lexica tbody td { text-align: center; padding: 4px 10px; }
+        .tabela-lexica tbody td:first-child { text-align: left; font-weight: 600; }
+        .tabela-lexica tbody tr.estado-final td:first-child { color: #16a34a; }
+        .tabela-lexica tbody tr.estado-inicial td:first-child { color: #1d4ed8; }
+        .tabela-lexica tbody tr.estado-final.estado-inicial td:first-child { color: #7c3aed; }
+        .tabela-lexica td.erro { color: #94a3b8; }
+        .legend-badge {
+            display: inline-block;
+            width: 12px; height: 12px;
+            border-radius: 2px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
         .loading-overlay {
             align-items: center;
             background: rgba(15, 23, 42, 0.68);
@@ -93,6 +120,50 @@
                 <hr>
                 <h2 class="h5">Tokens</h2>
                 <pre class="result-block">{{ lexico.tokens }}</pre>
+                {% endif %}
+
+                {# ══════════════════════════════════════════════════════════
+                   TABELA DE ANÁLISE LÉXICA (representação implícita do AFD)
+                   ══════════════════════════════════════════════════════════ #}
+                {% if lexico.tabela_lexica %}
+                <hr>
+                <h2 class="h5 mb-1">Tabela de Análise Léxica <small class="text-muted fw-normal" style="font-size:.8em">(representação implícita do AFD)</small></h2>
+
+                {# Legenda #}
+                <div class="mb-2" style="font-size:13px; color:#475569;">
+                    <span class="legend-badge" style="background:#1d4ed8;"></span> Estado inicial &nbsp;
+                    <span class="legend-badge" style="background:#16a34a;"></span> Estado final (aceitação) &nbsp;
+                    <span class="legend-badge" style="background:#7c3aed;"></span> Inicial e final &nbsp;
+                    <span style="color:#94a3b8;">—</span> Transição indefinida (erro)
+                </div>
+
+                <div class="result-block tabela-lexica-wrapper">
+                    <table class="table table-sm table-bordered tabela-lexica mb-0">
+                        <thead>
+                            <tr>
+                                <th>Estado</th>
+                                {% for simb in lexico.tabela_lexica.alfabeto %}
+                                <th>{{ simb }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linha in lexico.tabela_lexica.linhas %}
+                            <tr class="{% if linha.final and linha.inicial %}estado-final estado-inicial{% elif linha.final %}estado-final{% elif linha.inicial %}estado-inicial{% endif %}">
+                                <td>{{ linha.estado }}</td>
+                                {% for simb in lexico.tabela_lexica.alfabeto %}
+                                    {% set destino = linha.transicoes[simb] %}
+                                    {% if destino == '-' %}
+                                    <td class="erro">—</td>
+                                    {% else %}
+                                    <td>{{ destino }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% endif %}
 
                 {% if lexico.automata_svgs %}

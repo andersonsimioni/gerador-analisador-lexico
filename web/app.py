@@ -80,6 +80,8 @@ def build_empty_data(active_tab):
             "words": DEFAULT_WORDS,
             "tokens": "",
             "automata_svgs": [],
+            # Tabela léxica implícita do AFD
+            "tabela_lexica": None,  # {"alfabeto": [...], "linhas": [...]}
         },
         "first_follow": {
             "grammar": DEFAULT_GRAMMAR,
@@ -138,34 +140,28 @@ def run_lexical_analysis(req):
 
     parsed_definitions = parse_definitions_text(definitions)
     automata_svgs = []
-    lista_de_automatos = [] 
+    lista_de_automatos = []
 
     for name, regex in parsed_definitions:
         automaton = Automato.parse_regex(regex)
-        lista_de_automatos.append(automaton) 
-        
-        
+        lista_de_automatos.append(automaton)
         automata_svgs.append(automaton_to_svg(automaton, name=name))
 
-    #UNIÃO DOS AUTÔMATOS
+    tabela_lexica = None
+
     if len(lista_de_automatos) > 0:
+        # União dos autômatos (AFND)
         automato_unificado = Unificador_de_automato.uniao_de_automato(lista_de_automatos)
-        
-        # Gera o SVG do autômato unificado
         svg_uniao = automaton_to_svg(automato_unificado, name="União dos automatos")
-        
         automata_svgs.append(svg_uniao)
 
-        #FAZ A DETERMINIZAÇÃO (AFD)
+        # Determinização → AFD
         automato_determinizado = automato_unificado.determinization(automato_unificado)
-        
-        # Gera o SVG do AFD com um novo título
         svg_afd = automaton_to_svg(automato_determinizado, name="Autômato Determinizado (AFD)")
-        
-        # Adiciona como a última imagem 
         automata_svgs.append(svg_afd)
 
-        
+        # ── NOVO: Tabela de análise léxica (representação implícita do AFD) ──
+        tabela_lexica = gerar_tabela_lexica(automato_determinizado)
 
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as defs_tmp:
         defs_tmp.write(definitions)
@@ -182,6 +178,7 @@ def run_lexical_analysis(req):
         "words": words,
         "tokens": analyzer.get_tabela_tokens(words_path),
         "automata_svgs": automata_svgs,
+        "tabela_lexica": tabela_lexica,
     }
 
 
@@ -302,46 +299,70 @@ def format_plain_table(table):
         for state, columns in sorted(table.items())
     }
 
+
 def gerar_tabela_lexica(afd):
-    # 1. Descobre o alfabeto da tabela (todas as colunas possíveis)
+    """
+    Gera a tabela de análise léxica (representação implícita do AFD).
+
+    Retorna um dicionário com:
+      - "alfabeto": lista ordenada de todos os símbolos de entrada (colunas)
+      - "linhas": lista de dicts com "estado" (rótulo) e "transicoes" (dict símbolo→destino ou "-")
+    """
+    # 1. Coleta o alfabeto completo (todas as transições, exceto épsilon)
     alfabeto = set()
     for estado in afd.estados.values():
         for simbolo in estado.transicoes.keys():
-            if simbolo != "&":
+            if simbolo not in ("&", "ε", definicoes_EPISLON()):
                 alfabeto.add(simbolo)
     alfabeto = sorted(list(alfabeto))
-    
+
     linhas = []
-    
-    # 2. Monta as linhas (os estados)
+
+    # 2. Monta uma linha por estado
     for nome_estado in sorted(afd.estados.keys()):
         estado = afd.estados[nome_estado]
-        
-        # Marcadores clássicos de compiladores
+
+        # Prefixos clássicos: -> para inicial, * para final
         prefixo = ""
-        if estado.inicial: prefixo += "-> "
-        if estado.final: prefixo += "* "
-        
+        if estado.inicial:
+            prefixo += "-> "
+        if estado.final:
+            prefixo += "* "
+
         linha = {
-            "estado": f"{prefixo}[{nome_estado}]",
-            "transicoes": {}
+            "estado": f"{prefixo}{nome_estado}",
+            "final": estado.final,
+            "inicial": estado.inicial,
+            "transicoes": {},
         }
-        
-        # Preenche a célula de cada símbolo
+
+        # 3. Preenche cada célula com o estado destino ou "-" (erro)
         for simb in alfabeto:
             destinos = estado.transicoes.get(simb, [])
             if destinos:
-                # Num AFD sempre haverá só 1 destino, mas usamos join por precaução
-                linha["transicoes"][simb] = ", ".join([t.estado_destino.nome for t in destinos])
+                # AFD: sempre um único destino; join como salvaguarda
+                linha["transicoes"][simb] = ", ".join(
+                    t.estado_destino.nome for t in destinos
+                )
             else:
-                linha["transicoes"][simb] = "-" # Representa o Estado de Erro / Vazio
-                
+                linha["transicoes"][simb] = "-"
+
         linhas.append(linha)
-        
+
     return {
         "alfabeto": alfabeto,
-        "linhas": linhas
+        "linhas": linhas,
     }
+
+
+def definicoes_EPISLON():
+    """Retorna o símbolo de épsilon definido em definicoes.py sem importar o módulo aqui."""
+    try:
+        import definicoes
+        return definicoes.EPISLON
+    except Exception:
+        return "&"
+
 
 if __name__ == "__main__":
     app.run(debug=True)
