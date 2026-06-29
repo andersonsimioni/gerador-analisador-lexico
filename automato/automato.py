@@ -261,24 +261,30 @@ class Automato:
         
         return AF
     
-    def epsilon_fecho(AFN):
+    def epsilon_fecho(self, AFN):
+        print("[DETEMINIZACAO][epsilon_fecho] chamou epsilon fecho")
+
         epsilon_fecho = {}
-        
         grafo_epsilon = {}
-        for estado in AFN.estados:
+        
+        for estado in AFN.estados.values():
             grafo_epsilon[estado] = []
             
-        for estado in AFN.estados:
-            transicoes = estado.get_transicoes()
+        print("[DETEMINIZACAO][epsilon_fecho] iterando sobre os estados")
+        for estado in AFN.estados.values():
+            print("[DETEMINIZACAO][epsilon_fecho] estado", estado.nome)
+            
+            # Pega as transições vazias
+            transicoes = estado.get_transicoes(definicoes.EPISLON)
             for transicao in transicoes:
+                print("[DETEMINIZACAO][epsilon_fecho] transicao para", transicao.estado_destino.nome)
                 estado_origem = transicao.estado_origem
                 estado_destino = transicao.estado_destino
-                simbolo = transicao.simbolo
                 
-                if (simbolo == "&"):
-                    grafo_epsilon[estado_origem].append(estado_destino)
+                # Preenche o grafo corretamente com objetos
+                grafo_epsilon[estado_origem].append(estado_destino)
 
-        for estado_origem in AFN.estados:
+        for estado_origem in AFN.estados.values():
             visitados = [] 
             fila = []      
             
@@ -293,11 +299,17 @@ class Automato:
                     if vizinho not in visitados:
                         visitados.append(vizinho)
                         fila.append(vizinho)            
+            
             epsilon_fecho[estado_origem] = visitados
+
+        print("[DETEMINIZACAO][epsilon_fecho] TUDO CERTO RETORNANDO O FECHO")
         return epsilon_fecho
 
-
     def determinization(self, AFN):
+        print("[DETEMINIZACAO]")
+        print("[DETEMINIZACAO]")
+        print("[DETEMINIZACAO] chamou epsilon fecho")
+
         epsilon_fecho_local = self.epsilon_fecho(AFN)
         
         alfabeto = []
