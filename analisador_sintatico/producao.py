@@ -2,7 +2,8 @@ import simbolo_producao
 
 class Producao:
     
-    #E ::= E + T
+    #cabeca_corpo precisa estar no formato: E ::= E + T
+    #cabecas eh a lista de cabecas da GLC toda pra saber quem eh nao terminal
     def __init__(self, cabeca_corpo, cabecas=None):
         aux = cabeca_corpo
         separador_index = str(aux).index('::=')

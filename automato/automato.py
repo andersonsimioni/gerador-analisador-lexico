@@ -232,38 +232,61 @@ class Automato:
 
 
     def parse_regex(regex):    
+        #monta a arvore sintatica da regex e adiciona # no final e dentro de parenteses
+        # fica (regex) CONCAT #, assim tudo que sai dos parenteses pra # eh estado final
         arvore = arvore_sintax.arvore_sintax.ArvoreSintax(f"({regex})#")
+
+        #estado inicial do AFD eh o first da raiz
         raiz_first = arvore_sintax.no_arvore_sintax.NoArvoreSintax.get_ids_partes(arvore.raiz.first)
+
+        #guarda o id do # pra saber quais estados sao finais
         id_hastag = arvore.get_id_hastag()
+
         estados = { raiz_first }
         estados_finais = set()
         estado_inicial = "-".join([str(x) for x in sorted(raiz_first)])
         transicoes = set() # (estado_from, simbolo, estado_to)
         
+        #stack guarda os estados que ainda precisam ser abertos
         stack = [raiz_first]
         while(len(stack)  > 0):
             _estado = stack.pop()
             nome_estado_from = "-".join([str(x) for x in sorted(_estado)])
+
+            #caso tenha # nesse estado entao ele eh final
             if (id_hastag in _estado): estados_finais.add(nome_estado_from)
+
+            #pega os nos da arvore que formam esse estado
             nos = arvore.get_nos(_estado)
             
+            #agrupa os nos pelo simbolo pra calcular os follows juntos
             simbolos = {x[1].get_parte_regex_valor(): set() for x in nos}
-            for n in nos:
-                simbolos[n[1].get_parte_regex_valor()].add(n[1]) 
+            for n in nos: simbolos[n[1].get_parte_regex_valor()].add(n[1]) 
             
             for k in simbolos:
+                #ignora o # pq ele so marca estado final
                 if k == "#": continue
+
+                #o destino da transicao eh o follow dos nos desse simbolo
                 follows = frozenset([f.get_parte_regex_id() for n in simbolos[k] for f in n.follow])
+
+                #caso seja estado novo, adiciona pra abrir depois
                 if(follows not in stack and follows not in estados):
                     estados.add(follows)
                     stack.append(follows)
+
+                #salva a transicao do estado atual para o estado do follow
                 nome_estado_to = "-".join([str(x) for x in sorted(follows)])
                 transicoes.add((nome_estado_from, k, nome_estado_to))
+
+                #se o destino tem #, tambem eh estado final
                 if (id_hastag in follows): estados_finais.add(nome_estado_to)
                 
         AF = Automato('Aho')
     
+        #cria todos os estados ja marcando inicial e finais
         _estados = {s: estado.Estado(s, s == estado_inicial, s in estados_finais) for s in ["-".join([str(y) for y in sorted(x)]) for x in estados]}
+
         for t in transicoes:_estados[t[0]].add_transicao(transicao.Transicao(_estados[t[0]], _estados[t[2]], t[1]))
         for k in _estados.keys(): AF.add_estado(_estados[k])
         

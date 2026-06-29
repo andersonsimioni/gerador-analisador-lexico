@@ -256,5 +256,6 @@ class ArvoreSintax:
         return nos
     
     def get_id_hastag(self):
-        return [self.nos[x][1].get_parte_regex_id() for x in self.nos.keys() if self.nos[x][1].get_parte_regex_valor() == '#'][0]
+        return self.regex_partes[-1].id
+       # return [self.nos[x][1].get_parte_regex_id() for x in self.nos.keys() if self.nos[x][1].get_parte_regex_valor() == '#'][0]
         

@@ -8,8 +8,8 @@ class GramaticaLivreDeContexto:
         self.cabeca_inicial = None
         self.producoes = self.monta_GLC_obj(extender)
         
-        #self.firsts = self.calcular_first()
-        #self.follows = self.calcular_follow()
+        #self.firsts = self.calcular_first() #migrado pra set firsts
+        #self.follows = self.calcular_follow() #migrador pra set follows
         self.firsts ={}
         self.follows ={}
         self._firsts_stack = set()
@@ -31,11 +31,13 @@ class GramaticaLivreDeContexto:
         cabecas = set()
         producoes = set()
         
+        #esse primeiro loop e' so' pra reconhecer as cabecas  e saber oque e' nao terminal
         for l in self.GLC_em_string.split('\n'): 
             p = producao.Producao(l)
             if(self.cabeca_inicial == None): self.cabeca_inicial = p.cabeca
             cabecas.add(p.cabeca)
         
+        #esse extender vai adcionar uma prod S' 
         if(extender):
             novo_inicial = self.cabeca_inicial
             while(novo_inicial in cabecas): novo_inicial += '\''
@@ -43,6 +45,7 @@ class GramaticaLivreDeContexto:
             producoes.add(producao.Producao(f"{novo_inicial} ::= {self.cabeca_inicial}", cabecas))
             self.cabeca_inicial = novo_inicial
         
+        #aqui sim forma as prods definitivas
         for l in self.GLC_em_string.split('\n'): 
             producoes.add(producao.Producao(l, cabecas))
         
@@ -146,6 +149,10 @@ class GramaticaLivreDeContexto:
         
         return follows """
     
+    # esse wrapper eh por um erro de comunicacao e acabamos fazendo o codigo de 
+    # calcular first e follow duplicados, dois membros fizeram porem em repos diferentes
+    # com APIs GLCs diferentes, dai fizemos esse wrapper pra migrar o codigo sem alterar ele.
+    # esse wrapper apenas cria uma visao como se fosse a API GLC do outro repo que foi duplicado/excluido
     def _wrap_grammar_api(self):
         def wrap_symbol(s):
             class Symbol(str):
@@ -305,20 +312,30 @@ class GramaticaLivreDeContexto:
     
     def calcula_closure(self, lr0_item_prods):
         closure = [] + lr0_item_prods
-        stack = [] + lr0_item_prods
+        stack = [] + lr0_item_prods # itens que precisam ser verficados/abertos
         
         prods_novas = []
         while(len(stack) > 0):
             prod = stack.pop()
+
+            #caso 1: se o ponto chegou no fim, nao tem simbolo pra abrir
             if(prod.finalizo()): continue
+
             simbolo_atual = prod.get_simbolo_atual()
+
+            #caso 2: se o simbolo depois do ponto eh terminal, nao abre
             if(simbolo_atual.is_terminal): continue
             
+            #caso 3: se eh nao-terminal, busca as producoes dele
             prods = [p for p in self.producoes if p.cabeca == simbolo_atual.simbolo and p not in prods_novas]
             for p in prods:
+                #adiciona a producao no inicio, com ponto na posicao 0
                 prods_novas.append(p)
                 lr0 = prod_item_LR0.ProdItemLR0(p, 0)
                 closure.append(lr0)
+
+                #joga na stack pra saber se tem recursao
+                # ex jogoi A-> .BCa (precisa abrir o B tambem)
                 stack.append(lr0)
         
         return closure
@@ -330,33 +347,45 @@ class GramaticaLivreDeContexto:
         prod_inicial = [p for p in self.producoes if p.cabeca == self.cabeca_inicial][0]
         prod_inicial_closure = self.calcula_closure([prod_item_LR0.ProdItemLR0(prod_inicial, 0)])
         
+        #lista de itens LR0
+        # comecando pelo I0
         itens = [ prod_inicial_closure ]
+
+        #gotos guarda as transicoes entre os itens
         gotos = {}
         
         #['S->ABC \n A->zxc..'] = I0, itens/chaves apontam pra indice
         map_lr0_items = { self.lr0_item_to_str(k):0 for k in itens }
         
-        mudou = True
+        mudou = True #caso tenha coisa nova precisa reverificar por causa de recursao
         while mudou:
             mudou = False
             
+            #passa por cada item ja descoberto
             for i,item in enumerate(itens):
                 prods_aux = [x for x in item if not x.finalizo()]
                 simbolos = set([(x.get_simbolo_atual().simbolo, x.get_simbolo_atual().is_terminal) for x in prods_aux])
                 
                 for s in simbolos:
                     novo_item = []
+
+                    #caso GOTO: avanca o ponto nas producoes que usam esse simbolo
                     for p in [x for x in prods_aux if x.get_simbolo_atual().simbolo == s[0]]:    
                         novo_item.append(p.avanca_simbolo_atual())
                     
+                    #fecha o novo item com closure
                     novo_item = self.calcula_closure(novo_item)
-                    if(self.lr0_item_to_str(novo_item) not in map_lr0_items):
+
+                    #caso seja item novo, adiciona na colecao
+                    item_str= self.lr0_item_to_str(novo_item)
+                    if(item_str not in map_lr0_items):
                         id_novo_item = len(itens)
-                        map_lr0_items[self.lr0_item_to_str(novo_item)] = id_novo_item
+                        map_lr0_items[item_str] = id_novo_item
                         itens.append(novo_item)
                         mudou = True
                     else:
-                        id_novo_item = map_lr0_items[self.lr0_item_to_str(novo_item)]
+                        #caso ja exista, reaproveita o id dele
+                        id_novo_item = map_lr0_items[item_str]
                         
                     #goto(I_from, Simbolo) = I_to
                     #i, s, id_novo_item = GOT(i, s) = id_novo_item
