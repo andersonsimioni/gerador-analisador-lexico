@@ -86,6 +86,9 @@
 
         <ul class="nav nav-tabs" id="toolTabs" role="tablist">
             <li class="nav-item" role="presentation">
+                <button class="nav-link {% if active_tab == 'fluxo_completo' %}active{% endif %}" id="fluxo-completo-tab" data-bs-toggle="tab" data-bs-target="#fluxo-completo" type="button" role="tab">Fluxo completo</button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link {% if active_tab == 'lexico' %}active{% endif %}" id="lexico-tab" data-bs-toggle="tab" data-bs-target="#lexico" type="button" role="tab">Analise lexica</button>
             </li>
             <li class="nav-item" role="presentation">
@@ -97,6 +100,175 @@
         </ul>
 
         <div class="tab-content tool-panel border-top-0 rounded-top-0">
+            <section class="tab-pane fade {% if active_tab == 'fluxo_completo' %}show active{% endif %}" id="fluxo-completo" role="tabpanel">
+                <form method="POST" enctype="multipart/form-data" data-loading-form data-empty-message="Escolha os arquivos de definicoes, palavras e GLC antes de executar o fluxo completo.">
+                    <input type="hidden" name="tab" value="fluxo_completo">
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <label class="form-label">Definicoes regulares</label>
+                            <textarea class="form-control" name="fluxo_definitions_text">{{ fluxo_completo.definitions }}</textarea>
+                            <input class="form-control mt-2" type="file" name="fluxo_definitions_file" data-required-file>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Palavras do programa</label>
+                            <textarea class="form-control" name="fluxo_words_text">{{ fluxo_completo.words }}</textarea>
+                            <input class="form-control mt-2" type="file" name="fluxo_words_file" data-required-file>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Gramatica Livre de Contexto</label>
+                            <textarea class="form-control" name="fluxo_grammar_text">{{ fluxo_completo.grammar }}</textarea>
+                            <input class="form-control mt-2" type="file" name="fluxo_grammar_file" data-required-file>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Palavras reservadas</label>
+                            <textarea class="form-control" name="fluxo_reserved_words_text">{{ fluxo_completo.reserved_words }}</textarea>
+                            <input class="form-control mt-2" type="file" name="fluxo_reserved_words_file">
+                        </div>
+                    </div>
+                    <div class="alert alert-danger form-error"></div>
+                    <button class="btn btn-primary mt-3" type="submit">
+                        <span class="button-label">Executar fluxo completo</span>
+                    </button>
+                </form>
+
+                {% if fluxo_completo.lexico %}
+                <hr>
+                <h2 class="h5">Resultado final</h2>
+                {% if fluxo_completo.sintatico_message %}
+                <div class="alert alert-warning mb-3">{{ fluxo_completo.sintatico_message }}</div>
+                {% elif fluxo_completo.accepted %}
+                <div class="alert alert-success mb-3">A lista de tokens gerada pelo lexico foi aceita pela gramatica.</div>
+                {% else %}
+                <div class="alert alert-danger mb-3">A lista de tokens gerada pelo lexico nao foi aceita pela gramatica.</div>
+                {% endif %}
+
+                <h2 class="h5">Lista de tokens gerada pelo lexico</h2>
+                <pre class="result-block">{{ fluxo_completo.tokens_text }}</pre>
+
+                {% if fluxo_completo.tokens %}
+                <div class="result-block mb-3">
+                    <div class="fw-semibold mb-2">Tokens enviados para o analisador sintatico</div>
+                    <div class="token-list mono">
+                        {% for token in fluxo_completo.tokens %}
+                        <span class="token-pill">{{ token }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if fluxo_completo.reserved_words %}
+                <h2 class="h5">Palavras reservadas</h2>
+                <pre class="result-block">{{ fluxo_completo.reserved_words }}</pre>
+                {% endif %}
+
+                {% if fluxo_completo.lexico.tabela_lexica %}
+                <h2 class="h5 mt-4">Tabela de Analise Lexica</h2>
+                <div class="result-block tabela-lexica-wrapper">
+                    <table class="table table-sm table-bordered tabela-lexica mb-0">
+                        <thead>
+                            <tr>
+                                <th>Estado</th>
+                                {% for simb in fluxo_completo.lexico.tabela_lexica.alfabeto %}
+                                <th>{{ simb }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linha in fluxo_completo.lexico.tabela_lexica.linhas %}
+                            <tr class="{% if linha.final and linha.inicial %}estado-final estado-inicial{% elif linha.final %}estado-final{% elif linha.inicial %}estado-inicial{% endif %}">
+                                <td>{{ linha.estado }}</td>
+                                {% for simb in fluxo_completo.lexico.tabela_lexica.alfabeto %}
+                                    {% set destino = linha.transicoes[simb] %}
+                                    {% if destino == '-' %}
+                                    <td class="erro">-</td>
+                                    {% else %}
+                                    <td>{{ destino }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                {% if fluxo_completo.first_follow.firsts %}
+                <div class="row g-3 mt-3">
+                    <div class="col-lg-6">
+                        <h2 class="h5">FIRST</h2>
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Nao terminal</th><th>Conjunto</th></tr></thead>
+                            <tbody>
+                                {% for symbol, values in fluxo_completo.first_follow.firsts.items() %}
+                                <tr><td class="mono">{{ symbol }}</td><td class="mono">{ {{ values | join(', ') }} }</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-6">
+                        <h2 class="h5">FOLLOW</h2>
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Nao terminal</th><th>Conjunto</th></tr></thead>
+                            <tbody>
+                                {% for symbol, values in fluxo_completo.first_follow.follows.items() %}
+                                <tr><td class="mono">{{ symbol }}</td><td class="mono">{ {{ values | join(', ') }} }</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if fluxo_completo.sintatico %}
+                <div class="row g-3 mt-2">
+                    <div class="col-lg-6">
+                        <h2 class="h5">ACTION</h2>
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Estado</th><th>Colunas</th></tr></thead>
+                            <tbody>
+                                {% for state, columns in fluxo_completo.sintatico.action_table.items() %}
+                                <tr>
+                                    <td class="mono">{{ state }}</td>
+                                    <td class="mono">
+                                        {% for symbol, action in columns.items() %}
+                                        {{ symbol }}: {{ action }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-lg-6">
+                        <h2 class="h5">GOTO TABLE</h2>
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Estado</th><th>Colunas</th></tr></thead>
+                            <tbody>
+                                {% for state, columns in fluxo_completo.sintatico.goto_table.items() %}
+                                <tr>
+                                    <td class="mono">{{ state }}</td>
+                                    <td class="mono">
+                                        {% for symbol, target in columns.items() %}
+                                        {{ symbol }}: {{ target }}{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if fluxo_completo.lexico.automata_svgs %}
+                <h2 class="h5 mt-4">Automatos</h2>
+                {% for svg in fluxo_completo.lexico.automata_svgs %}
+                <div class="result-block automaton mb-3">{{ svg | safe }}</div>
+                {% endfor %}
+                {% endif %}
+                {% endif %}
+            </section>
+
             <section class="tab-pane fade {% if active_tab == 'lexico' %}show active{% endif %}" id="lexico" role="tabpanel">
                 <form method="POST" enctype="multipart/form-data" data-loading-form data-empty-message="Escolha o arquivo de definicoes e o arquivo de palavras antes de executar.">
                     <input type="hidden" name="tab" value="lexico">

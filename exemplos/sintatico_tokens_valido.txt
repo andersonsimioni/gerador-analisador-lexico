@@ -1,0 +1,9 @@
+<x,id>
+<+,op_plus>
+<12,num>
+<*,op_star>
+<(,lparen>
+<true,bool>
+<+,op_plus>
+<0xff,hex>
+<),rparen>

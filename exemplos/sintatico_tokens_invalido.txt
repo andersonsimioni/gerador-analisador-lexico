@@ -1,0 +1,4 @@
+<x,id>
+<+,op_plus>
+<*,op_star>
+<12,num>

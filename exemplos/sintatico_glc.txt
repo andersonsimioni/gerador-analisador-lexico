@@ -1,0 +1,14 @@
+Programa ::= Expressao
+Expressao ::= Expressao op_plus Termo
+Expressao ::= Termo
+Termo ::= Termo op_star Fator
+Termo ::= Fator
+Fator ::= lparen Expressao rparen
+Fator ::= id
+Fator ::= snake_id
+Fator ::= num
+Fator ::= float
+Fator ::= hex
+Fator ::= bin_prefix
+Fator ::= bin
+Fator ::= bool

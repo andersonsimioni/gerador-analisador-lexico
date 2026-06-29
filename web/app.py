@@ -59,15 +59,27 @@ DEFAULT_SYNTACTIC_TOKENS = """<x,id>
 <*,op_times>
 <z,id>"""
 
+DEFAULT_RESERVED_WORDS = """if
+else
+while
+true
+false"""
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    active_tab = request.form.get("tab", "lexico")
+    active_tab = request.form.get("tab", "fluxo_completo")
     data = build_empty_data(active_tab)
 
     if request.method == "POST":
         try:
-            if active_tab == "lexico":
+            if active_tab == "fluxo_completo":
+                data["fluxo_completo"] = run_full_flow_analysis(request)
+                data["lexico"] = data["fluxo_completo"]["lexico"]
+                data["first_follow"] = data["fluxo_completo"]["first_follow"]
+                if data["fluxo_completo"]["sintatico"]:
+                    data["sintatico"] = data["fluxo_completo"]["sintatico"]
+            elif active_tab == "lexico":
                 data["lexico"] = run_lexical_analysis(request)
             elif active_tab == "first_follow":
                 data["first_follow"] = run_first_follow(request)
@@ -88,6 +100,19 @@ def build_empty_data(active_tab):
             "definitions": DEFAULT_DEFINITIONS,
             "words": DEFAULT_WORDS,
             "grammar": DEFAULT_GRAMMAR,
+        },
+        "fluxo_completo": {
+            "definitions": DEFAULT_DEFINITIONS,
+            "words": DEFAULT_WORDS,
+            "grammar": DEFAULT_SYNTACTIC_GRAMMAR,
+            "reserved_words": DEFAULT_RESERVED_WORDS,
+            "lexico": None,
+            "first_follow": None,
+            "sintatico": None,
+            "tokens_text": "",
+            "tokens": [],
+            "accepted": None,
+            "sintatico_message": "",
         },
         "lexico": {
             "definitions": DEFAULT_DEFINITIONS,
@@ -119,6 +144,11 @@ def keep_submitted_values(data, active_tab):
     if active_tab == "lexico":
         data["lexico"]["definitions"] = request.form.get("definitions_text", "")
         data["lexico"]["words"] = request.form.get("words_text", "")
+    elif active_tab == "fluxo_completo":
+        data["fluxo_completo"]["definitions"] = request.form.get("fluxo_definitions_text", "")
+        data["fluxo_completo"]["words"] = request.form.get("fluxo_words_text", "")
+        data["fluxo_completo"]["grammar"] = request.form.get("fluxo_grammar_text", "")
+        data["fluxo_completo"]["reserved_words"] = request.form.get("fluxo_reserved_words_text", "")
     elif active_tab == "first_follow":
         data["first_follow"]["grammar"] = request.form.get("first_follow_grammar", "")
     elif active_tab == "sintatico":
@@ -156,6 +186,10 @@ def run_lexical_analysis(req):
         "O arquivo de palavras de teste esta vazio.",
     )
 
+    return run_lexical_from_text(definitions, words)
+
+
+def run_lexical_from_text(definitions, words):
     parsed_definitions = parse_definitions_text(definitions)
     automata_svgs = []
     lista_de_automatos = []
@@ -204,7 +238,7 @@ def run_first_follow(req):
     grammar_text = require_content(
         get_required_file("first_follow_file", "Escolha o arquivo da GLC antes de calcular FIRST/FOLLOW."),
         "O arquivo da GLC esta vazio.",
-    )
+    ).strip()
     grammar = GramaticaLivreDeContexto(grammar_text)
 
     return {
@@ -218,11 +252,16 @@ def run_syntactic_analysis(req):
     grammar_text = require_content(
         get_required_file("sintatico_file", "Escolha o arquivo da GLC antes de gerar a analise sintatica."),
         "O arquivo da GLC esta vazio.",
-    )
+    ).strip()
     tokens_text = require_content(
         get_required_file("sintatico_tokens_file", "Escolha o arquivo com a lista de tokens antes de executar a analise sintatica."),
         "O arquivo de tokens esta vazio.",
     )
+
+    return run_syntactic_from_text(grammar_text, tokens_text)
+
+
+def run_syntactic_from_text(grammar_text, tokens_text):
     tokens = parse_tokens_text(tokens_text)
     grammar = GramaticaLivreDeContexto(grammar_text)
     sintatico = AnalisadorSintatico(grammar)
@@ -237,6 +276,60 @@ def run_syntactic_analysis(req):
         "gotos": format_gotos(grammar.get_gotos()),
         "action_table": format_action_table(action_table),
         "goto_table": format_plain_table(goto_table),
+    }
+
+
+def run_full_flow_analysis(req):
+    definitions = require_content(
+        get_required_file("fluxo_definitions_file", "Escolha o arquivo de definicoes regulares para executar o fluxo completo."),
+        "O arquivo de definicoes regulares esta vazio.",
+    )
+    words = require_content(
+        get_required_file("fluxo_words_file", "Escolha o arquivo de palavras do programa para executar o fluxo completo."),
+        "O arquivo de palavras esta vazio.",
+    )
+    grammar_text = require_content(
+        get_required_file("fluxo_grammar_file", "Escolha o arquivo da GLC para executar o fluxo completo."),
+        "O arquivo da GLC esta vazio.",
+    ).strip()
+    reserved_words = get_text_or_file("fluxo_reserved_words_text", "fluxo_reserved_words_file", "").strip()
+
+    lexico = run_lexical_from_text(definitions, words)
+    first_follow = run_first_follow_from_text(grammar_text)
+
+    result = {
+        "definitions": definitions,
+        "words": words,
+        "grammar": grammar_text,
+        "reserved_words": reserved_words,
+        "lexico": lexico,
+        "first_follow": first_follow,
+        "sintatico": None,
+        "tokens_text": lexico["tokens"],
+        "tokens": [],
+        "accepted": None,
+        "sintatico_message": "",
+    }
+
+    if "erro!" in lexico["tokens"]:
+        result["sintatico_message"] = "A analise sintatica nao foi executada porque a lista de tokens contem erro lexico."
+        return result
+
+    sintatico = run_syntactic_from_text(grammar_text, lexico["tokens"])
+    result["sintatico"] = sintatico
+    result["tokens"] = sintatico["tokens"]
+    result["accepted"] = sintatico["accepted"]
+
+    return result
+
+
+def run_first_follow_from_text(grammar_text):
+    grammar = GramaticaLivreDeContexto(grammar_text)
+
+    return {
+        "grammar": grammar_text,
+        "firsts": sort_sets(grammar.firsts),
+        "follows": sort_sets(grammar.follows),
     }
 
 

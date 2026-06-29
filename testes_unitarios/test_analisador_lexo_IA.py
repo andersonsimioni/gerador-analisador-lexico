@@ -53,14 +53,14 @@ def load_analisador(runner):
 
 def build_analisador(runner, AnalisadorLexo):
     print("\n== Build analisador ==")
-    path_definicoes = EXEMPLOS_DIR / "definicoes.txt"
+    path_definicoes = EXEMPLOS_DIR / "lexico_defs.txt"
 
     try:
         analisador = AnalisadorLexo(str(path_definicoes))
-        runner.check("AnalisadorLexo(exemplos/definicoes.txt)", True)
+        runner.check("AnalisadorLexo(exemplos/lexico_defs.txt)", True)
         return analisador
     except Exception:
-        runner.check("AnalisadorLexo(exemplos/definicoes.txt)", False, traceback.format_exc())
+        runner.check("AnalisadorLexo(exemplos/lexico_defs.txt)", False, traceback.format_exc())
         return None
 
 
@@ -85,7 +85,7 @@ def check_classes(runner, analisador, palavra, esperadas):
 
 def check_tabela_tokens(runner, analisador):
     print("\n== Tabela de tokens ==")
-    path_palavras = EXEMPLOS_DIR / "palavras.txt"
+    path_palavras = EXEMPLOS_DIR / "lexico_misto.txt"
 
     esperado = "\n".join([
         "<if,keyword_if>",
@@ -165,9 +165,9 @@ def check_tabela_tokens(runner, analisador):
 
     try:
         obtido = analisador.get_tabela_tokens(str(path_palavras))
-        runner.check("get_tabela_tokens(exemplos/palavras.txt)", obtido == esperado, f"obtido:\n{obtido!r}\n\nesperado:\n{esperado!r}")
+        runner.check("get_tabela_tokens(exemplos/lexico_misto.txt)", obtido == esperado, f"obtido:\n{obtido!r}\n\nesperado:\n{esperado!r}")
     except Exception:
-        runner.check("get_tabela_tokens(exemplos/palavras.txt)", False, traceback.format_exc())
+        runner.check("get_tabela_tokens(exemplos/lexico_misto.txt)", False, traceback.format_exc())
 
 
 def run_tests(runner, analisador):
