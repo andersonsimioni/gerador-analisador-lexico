@@ -1,0 +1,8 @@
+<table class="table table-sm table-striped">
+    <thead><tr><th>Nao terminal</th><th>Conjunto</th></tr></thead>
+    <tbody>
+        {% for symbol, values in first_follow.firsts.items() %}
+        <tr><td class="mono">{{ symbol }}</td><td class="mono">{ {{ values | join(', ') }} }</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

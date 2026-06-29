@@ -1,0 +1,15 @@
+<table class="table table-sm table-striped">
+    <thead><tr><th>Estado</th><th>Colunas</th></tr></thead>
+    <tbody>
+        {% for state, columns in sintatico.action_table.items() %}
+        <tr>
+            <td class="mono">{{ state }}</td>
+            <td class="mono">
+                {% for symbol, action in columns.items() %}
+                {{ symbol }}: {{ action }}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

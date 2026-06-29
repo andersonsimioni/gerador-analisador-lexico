@@ -1,0 +1,13 @@
+S ::= A B C d
+S ::= E f
+A ::= a A
+A ::= &
+B ::= b B
+B ::= C D
+B ::= &
+C ::= c C
+C ::= &
+D ::= d D
+D ::= &
+E ::= A e
+E ::= g
