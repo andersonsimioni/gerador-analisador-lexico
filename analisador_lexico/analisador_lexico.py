@@ -29,7 +29,7 @@ class AnalisadorLexo:
                 if(aux.endswith('\n')): aux = aux[:-1]
                 
                 try: 
-                    classe = [dr for dr in self.definicoes_regulares.keys() if self.definicoes_regulares[dr].reconhece(aux)][0]
+                    classe = next(dr for dr in self.definicoes_regulares.keys() if self.definicoes_regulares[dr].reconhece(aux))
                     tabela_tokens.append(f'<{aux},{classe}>')
                 except: 
                     tabela_tokens.append(f"<{aux},erro!>")
