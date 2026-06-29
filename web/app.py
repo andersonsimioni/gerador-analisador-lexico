@@ -403,8 +403,9 @@ def parse_tokens_text(content):
 def format_tabela_simbolos(tabela_simbolos):
     linhas = []
 
-    for lexema, token in tabela_simbolos.items():
+    for i, (lexema, token) in enumerate(tabela_simbolos.items(), start=1):
         linhas.append({
+            "linha": i,
             "lexema": lexema,
             "token": token,
         })

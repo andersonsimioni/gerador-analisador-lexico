@@ -151,6 +151,7 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead>
                             <tr>
+                                <th>Linha</th>
                                 <th>Lexema</th>
                                 <th>Token</th>
                             </tr>
@@ -158,6 +159,7 @@
                         <tbody>
                             {% for linha in fluxo_completo.lexico.tabela_simbolos %}
                             <tr>
+                                <td>{{ linha.linha }}</td>
                                 <td>{{ linha.lexema }}</td>
                                 <td>{{ linha.token }}</td>
                             </tr>
@@ -336,6 +338,7 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead>
                             <tr>
+                                <th>Linha</th>
                                 <th>Lexema</th>
                                 <th>Token</th>
                             </tr>
@@ -343,6 +346,7 @@
                         <tbody>
                             {% for linha in lexico.tabela_simbolos %}
                             <tr>
+                                <td>{{ linha.linha }}</td>
                                 <td>{{ linha.lexema }}</td>
                                 <td>{{ linha.token }}</td>
                             </tr>
