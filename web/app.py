@@ -19,6 +19,7 @@ from automato.automato import Automato
 from automato.unificador_de_automato import Unificador_de_automato
 from analisador_lexico import AnalisadorLexo
 from gramatica_livre import GramaticaLivreDeContexto
+from analisador_sintatico import AnalisadorSintatico
 
 
 app = Flask(__name__)
@@ -44,6 +45,19 @@ T ::= T * F
 T ::= F
 F ::= ( E )
 F ::= id"""
+
+DEFAULT_SYNTACTIC_GRAMMAR = """E ::= E op_plus T
+E ::= T
+T ::= T op_times F
+T ::= F
+F ::= lparen E rparen
+F ::= id"""
+
+DEFAULT_SYNTACTIC_TOKENS = """<x,id>
+<+,op_plus>
+<y,id>
+<*,op_times>
+<z,id>"""
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -89,7 +103,10 @@ def build_empty_data(active_tab):
             "follows": {},
         },
         "sintatico": {
-            "grammar": DEFAULT_GRAMMAR,
+            "grammar": DEFAULT_SYNTACTIC_GRAMMAR,
+            "tokens_text": DEFAULT_SYNTACTIC_TOKENS,
+            "tokens": [],
+            "accepted": None,
             "items": [],
             "gotos": [],
             "action_table": {},
@@ -106,6 +123,7 @@ def keep_submitted_values(data, active_tab):
         data["first_follow"]["grammar"] = request.form.get("first_follow_grammar", "")
     elif active_tab == "sintatico":
         data["sintatico"]["grammar"] = request.form.get("sintatico_grammar", "")
+        data["sintatico"]["tokens_text"] = request.form.get("sintatico_tokens", "")
 
 
 def get_text_or_file(field_name, file_name, default=""):
@@ -201,11 +219,20 @@ def run_syntactic_analysis(req):
         get_required_file("sintatico_file", "Escolha o arquivo da GLC antes de gerar a analise sintatica."),
         "O arquivo da GLC esta vazio.",
     )
+    tokens_text = require_content(
+        get_required_file("sintatico_tokens_file", "Escolha o arquivo com a lista de tokens antes de executar a analise sintatica."),
+        "O arquivo de tokens esta vazio.",
+    )
+    tokens = parse_tokens_text(tokens_text)
     grammar = GramaticaLivreDeContexto(grammar_text)
+    sintatico = AnalisadorSintatico(grammar)
     action_table, goto_table = grammar.GLC_exntedida.tabela_SLR
 
     return {
         "grammar": grammar_text,
+        "tokens_text": tokens_text,
+        "tokens": tokens,
+        "accepted": sintatico.aceita(tokens),
         "items": format_lr0_items(grammar.get_itens_LR0()),
         "gotos": format_gotos(grammar.get_gotos()),
         "action_table": format_action_table(action_table),
@@ -225,6 +252,38 @@ def parse_definitions_text(content):
         definitions.append((name.strip(), regex.strip()))
 
     return definitions
+
+
+def parse_tokens_text(content):
+    tokens = []
+
+    for line in content.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith("<") and line.endswith(">"):
+            tokens.append(parse_token(line))
+            continue
+
+        for token in line.split():
+            tokens.append(parse_token(token))
+
+    if not tokens:
+        raise ValueError("A lista de tokens esta vazia.")
+
+    if "erro!" in tokens:
+        raise ValueError("A lista de tokens contem erro lexico. Corrija a analise lexica antes de executar a analise sintatica.")
+
+    return tokens
+
+
+def parse_token(token):
+    if token.startswith("<") and token.endswith(">") and "," in token:
+        token = token[1:-1]
+        return token.split(",")[-1].strip()
+
+    return token.strip()
 
 
 def automaton_to_svg(automaton, name=""):

@@ -20,6 +20,8 @@
         .form-error { display: none; margin-top: 12px; }
         .lr0-lines { margin-top: 8px; overflow-x: auto; }
         .lr0-line { font-family: Consolas, monospace; font-size: 14px; white-space: nowrap; }
+        .token-list { display: flex; flex-wrap: wrap; gap: 6px; }
+        .token-pill { background: #e2e8f0; border-radius: 6px; padding: 4px 8px; }
 
         /* ── Tabela Léxica ── */
         .tabela-lexica-wrapper { overflow-x: auto; }
@@ -209,19 +211,44 @@
             </section>
 
             <section class="tab-pane fade {% if active_tab == 'sintatico' %}show active{% endif %}" id="sintatico" role="tabpanel">
-                <form method="POST" enctype="multipart/form-data" data-loading-form data-empty-message="Escolha um arquivo de GLC antes de gerar a analise sintatica.">
+                <form method="POST" enctype="multipart/form-data" data-loading-form data-empty-message="Escolha o arquivo da GLC e o arquivo da lista de tokens antes de gerar a analise sintatica.">
                     <input type="hidden" name="tab" value="sintatico">
-                    <label class="form-label">Gramatica Livre de Contexto</label>
-                    <textarea class="form-control" name="sintatico_grammar">{{ sintatico.grammar }}</textarea>
-                    <input class="form-control mt-2" type="file" name="sintatico_file" data-required-file>
+                    <div class="row g-3">
+                        <div class="col-lg-6">
+                            <label class="form-label">Gramatica Livre de Contexto</label>
+                            <textarea class="form-control" name="sintatico_grammar">{{ sintatico.grammar }}</textarea>
+                            <input class="form-control mt-2" type="file" name="sintatico_file" data-required-file>
+                        </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Lista de tokens</label>
+                            <textarea class="form-control" name="sintatico_tokens">{{ sintatico.tokens_text }}</textarea>
+                            <input class="form-control mt-2" type="file" name="sintatico_tokens_file" data-required-file>
+                        </div>
+                    </div>
                     <div class="alert alert-danger form-error"></div>
                     <button class="btn btn-primary mt-3" type="submit">
-                        <span class="button-label">Gerar analise sintatica</span>
+                        <span class="button-label">Executar analise sintatica</span>
                     </button>
                 </form>
 
                 {% if sintatico['items'] %}
                 <hr>
+                <h2 class="h5">Resultado da analise</h2>
+                {% if sintatico.accepted %}
+                <div class="alert alert-success mb-3">A lista de tokens foi aceita pela gramatica.</div>
+                {% else %}
+                <div class="alert alert-danger mb-3">A lista de tokens nao foi aceita pela gramatica.</div>
+                {% endif %}
+
+                <div class="result-block mb-3">
+                    <div class="fw-semibold mb-2">Tokens analisados</div>
+                    <div class="token-list mono">
+                        {% for token in sintatico.tokens %}
+                        <span class="token-pill">{{ token }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div class="row g-3">
                     <div class="col-lg-6">
                         <h2 class="h5">Itens LR0</h2>
