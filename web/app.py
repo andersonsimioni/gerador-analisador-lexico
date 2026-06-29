@@ -156,6 +156,17 @@ def run_lexical_analysis(req):
         
         automata_svgs.append(svg_uniao)
 
+        #FAZ A DETERMINIZAÇÃO (AFD)
+        automato_determinizado = automato_unificado.determinization(automato_unificado)
+        
+        # Gera o SVG do AFD com um novo título
+        svg_afd = automaton_to_svg(automato_determinizado, name="Autômato Determinizado (AFD)")
+        
+        # Adiciona como a última imagem 
+        automata_svgs.append(svg_afd)
+
+        
+
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as defs_tmp:
         defs_tmp.write(definitions)
         defs_path = defs_tmp.name
@@ -291,6 +302,46 @@ def format_plain_table(table):
         for state, columns in sorted(table.items())
     }
 
+def gerar_tabela_lexica(afd):
+    # 1. Descobre o alfabeto da tabela (todas as colunas possíveis)
+    alfabeto = set()
+    for estado in afd.estados.values():
+        for simbolo in estado.transicoes.keys():
+            if simbolo != "&":
+                alfabeto.add(simbolo)
+    alfabeto = sorted(list(alfabeto))
+    
+    linhas = []
+    
+    # 2. Monta as linhas (os estados)
+    for nome_estado in sorted(afd.estados.keys()):
+        estado = afd.estados[nome_estado]
+        
+        # Marcadores clássicos de compiladores
+        prefixo = ""
+        if estado.inicial: prefixo += "-> "
+        if estado.final: prefixo += "* "
+        
+        linha = {
+            "estado": f"{prefixo}[{nome_estado}]",
+            "transicoes": {}
+        }
+        
+        # Preenche a célula de cada símbolo
+        for simb in alfabeto:
+            destinos = estado.transicoes.get(simb, [])
+            if destinos:
+                # Num AFD sempre haverá só 1 destino, mas usamos join por precaução
+                linha["transicoes"][simb] = ", ".join([t.estado_destino.nome for t in destinos])
+            else:
+                linha["transicoes"][simb] = "-" # Representa o Estado de Erro / Vazio
+                
+        linhas.append(linha)
+        
+    return {
+        "alfabeto": alfabeto,
+        "linhas": linhas
+    }
 
 if __name__ == "__main__":
     app.run(debug=True)
