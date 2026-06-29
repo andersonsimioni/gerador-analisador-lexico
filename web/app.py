@@ -59,11 +59,11 @@ DEFAULT_SYNTACTIC_TOKENS = """<x,id>
 <*,op_times>
 <z,id>"""
 
-DEFAULT_RESERVED_WORDS = """if
-else
-while
-true
-false"""
+DEFAULT_RESERVED_WORDS = """if:keyword_if
+else:keyword_else
+while:keyword_while
+true:bool
+false:bool"""
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -117,7 +117,9 @@ def build_empty_data(active_tab):
         "lexico": {
             "definitions": DEFAULT_DEFINITIONS,
             "words": DEFAULT_WORDS,
+            "reserved_words": DEFAULT_RESERVED_WORDS,
             "tokens": "",
+            "tabela_simbolos": [],
             "automata_svgs": [],
             # Tabela léxica implícita do AFD
             "tabela_lexica": None,  # {"alfabeto": [...], "linhas": [...]}
@@ -144,6 +146,7 @@ def keep_submitted_values(data, active_tab):
     if active_tab == "lexico":
         data["lexico"]["definitions"] = request.form.get("definitions_text", "")
         data["lexico"]["words"] = request.form.get("words_text", "")
+        data["lexico"]["reserved_words"] = request.form.get("reserved_words_text", "")
     elif active_tab == "fluxo_completo":
         data["fluxo_completo"]["definitions"] = request.form.get("fluxo_definitions_text", "")
         data["fluxo_completo"]["words"] = request.form.get("fluxo_words_text", "")
@@ -185,11 +188,12 @@ def run_lexical_analysis(req):
         get_required_file("words_file", "Escolha o arquivo de palavras de teste antes de executar a analise lexica."),
         "O arquivo de palavras de teste esta vazio.",
     )
+    reserved_words = get_text_or_file("reserved_words_text", "reserved_words_file", "")
 
-    return run_lexical_from_text(definitions, words)
+    return run_lexical_from_text(definitions, words, reserved_words)
 
 
-def run_lexical_from_text(definitions, words):
+def run_lexical_from_text(definitions, words, reserved_words=""):
     parsed_definitions = parse_definitions_text(definitions)
     automata_svgs = []
     lista_de_automatos = []
@@ -239,12 +243,21 @@ def run_lexical_from_text(definitions, words):
         words_tmp.write(words)
         words_path = words_tmp.name
 
-    analyzer = AnalisadorLexo(defs_path)
+    reserved_path = None
+    if(reserved_words and reserved_words.strip()):
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as reserved_tmp:
+            reserved_tmp.write(reserved_words)
+            reserved_path = reserved_tmp.name
+
+    analyzer = AnalisadorLexo(defs_path, reserved_path)
+    tokens = analyzer.get_tabela_tokens(words_path)
 
     return {
         "definitions": definitions,
         "words": words,
-        "tokens": analyzer.get_tabela_tokens(words_path),
+        "reserved_words": reserved_words,
+        "tokens": tokens,
+        "tabela_simbolos": format_tabela_simbolos(analyzer.tabela_simbolos),
         "automata_svgs": automata_svgs,
         "tabela_lexica": tabela_lexica,
     }
@@ -310,7 +323,7 @@ def run_full_flow_analysis(req):
     ).strip()
     reserved_words = get_text_or_file("fluxo_reserved_words_text", "fluxo_reserved_words_file", "").strip()
 
-    lexico = run_lexical_from_text(definitions, words)
+    lexico = run_lexical_from_text(definitions, words, reserved_words)
     first_follow = run_first_follow_from_text(grammar_text)
 
     result = {
@@ -387,10 +400,25 @@ def parse_tokens_text(content):
     return tokens
 
 
+def format_tabela_simbolos(tabela_simbolos):
+    linhas = []
+
+    for lexema, token in tabela_simbolos.items():
+        linhas.append({
+            "lexema": lexema,
+            "token": token,
+        })
+
+    return linhas
+
+
 def parse_token(token):
     if token.startswith("<") and token.endswith(">") and "," in token:
         token = token[1:-1]
-        return token.split(",")[-1].strip()
+        lexema, classe = token.split(",", 1)
+        if(lexema.strip() == "id"):
+            return "id"
+        return classe.strip()
 
     return token.strip()
 

@@ -145,6 +145,28 @@
                 <h2 class="h5">Lista de tokens gerada pelo lexico</h2>
                 <pre class="result-block">{{ fluxo_completo.tokens_text }}</pre>
 
+                {% if fluxo_completo.lexico.tabela_simbolos %}
+                <h2 class="h5">Tabela de simbolos</h2>
+                <div class="result-block tabela-lexica-wrapper">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Lexema</th>
+                                <th>Token</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linha in fluxo_completo.lexico.tabela_simbolos %}
+                            <tr>
+                                <td>{{ linha.lexema }}</td>
+                                <td>{{ linha.token }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
                 {% if fluxo_completo.tokens %}
                 <div class="result-block mb-3">
                     <div class="fw-semibold mb-2">Tokens enviados para o analisador sintatico</div>
@@ -290,6 +312,11 @@
                             <textarea class="form-control" name="words_text">{{ lexico.words }}</textarea>
                             <input class="form-control mt-2" type="file" name="words_file" data-required-file>
                         </div>
+                        <div class="col-lg-6">
+                            <label class="form-label">Palavras reservadas</label>
+                            <textarea class="form-control" name="reserved_words_text">{{ lexico.reserved_words }}</textarea>
+                            <input class="form-control mt-2" type="file" name="reserved_words_file">
+                        </div>
                     </div>
                     <div class="alert alert-danger form-error"></div>
                     <button class="btn btn-primary mt-3" type="submit">
@@ -301,6 +328,28 @@
                 <hr>
                 <h2 class="h5">Tokens</h2>
                 <pre class="result-block">{{ lexico.tokens }}</pre>
+                {% endif %}
+
+                {% if lexico.tabela_simbolos %}
+                <h2 class="h5">Tabela de simbolos</h2>
+                <div class="result-block tabela-lexica-wrapper">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Lexema</th>
+                                <th>Token</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for linha in lexico.tabela_simbolos %}
+                            <tr>
+                                <td>{{ linha.lexema }}</td>
+                                <td>{{ linha.token }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
                 {% endif %}
 
                 {# ══════════════════════════════════════════════════════════
