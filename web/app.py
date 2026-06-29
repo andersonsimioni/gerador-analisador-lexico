@@ -16,6 +16,7 @@ sys.path.append(str(ANALISADOR_LEXICO_DIR))
 sys.path.append(str(ANALISADOR_SINTATICO_DIR))
 
 from automato.automato import Automato
+from automato.unificador_de_automato import Unificador_de_automato
 from analisador_lexico import AnalisadorLexo
 from gramatica_livre import GramaticaLivreDeContexto
 
@@ -137,10 +138,23 @@ def run_lexical_analysis(req):
 
     parsed_definitions = parse_definitions_text(definitions)
     automata_svgs = []
+    lista_de_automatos = [] 
 
     for name, regex in parsed_definitions:
         automaton = Automato.parse_regex(regex)
+        lista_de_automatos.append(automaton) 
+        
+        
         automata_svgs.append(automaton_to_svg(automaton, name=name))
+
+    #UNIÃO DOS AUTÔMATOS
+    if len(lista_de_automatos) > 0:
+        automato_unificado = Unificador_de_automato.uniao_de_automato(lista_de_automatos)
+        
+        # Gera o SVG do autômato unificado
+        svg_uniao = automaton_to_svg(automato_unificado, name="União dos automatos")
+        
+        automata_svgs.append(svg_uniao)
 
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as defs_tmp:
         defs_tmp.write(definitions)
