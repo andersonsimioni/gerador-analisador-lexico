@@ -212,7 +212,11 @@ def run_lexical_from_text(definitions, words):
         svg_afd = automaton_to_svg(automato_determinizado, name="Autômato Determinizado (AFD)")
         automata_svgs.append(svg_afd)
 
-        # ── NOVO: Tabela de análise léxica (representação implícita do AFD) ──
+        automato_determinizado.minimization()
+        svg_min = automaton_to_svg(automato_determinizado, name="Autômato Minimizado")
+        automata_svgs.append(svg_min)
+
+        # ── NOVO: Tabela de análise léxica (representação implícita do AFD minimizado) ──
         tabela_lexica = gerar_tabela_lexica(automato_determinizado)
 
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as defs_tmp:

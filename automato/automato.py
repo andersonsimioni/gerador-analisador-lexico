@@ -20,16 +20,24 @@ class Automato:
     
     def reconhece(self, palavra):
         len_busca_largura = 0
-        proximos = [(self.get_inicial(), palavra)]
+        proximos = [(self.get_inicial(), palavra)] # (estado, palavra)
+        #cada ramo do AFND tem seu estado atual e sua palavra sendo consumida
+        #ex: ramo1 -> (S0, 'hello')   ramo123 -> (Sx, 'llo')   ramo1234(Sy, 'ello)..
         
+        #em caso de AFND usa MAX_BUSCA_LARGURA_AFND pra nao explodir
         while(proximos is not None and len_busca_largura < definicoes.MAX_BUSCA_LARGURA_AFND):
             len_busca_largura += 1
             if any([True for x in proximos if x[0].final and x[1] == '']): return True
+            
+            #usa compression pra calcular proximos estados
             proximos = [(estado, t[1]) for t in 
+                              #calcula proximos estados por simbolo lido x[1][0] e consome um da entrada
                               [(x[0].get_proximos_estados(x[1][0]), x[1][1:]) for x in proximos if len(x[1]) > 0] +
+                              #calcula proximos estados por epislon porem nao consome entrada
                               [(x[0].get_proximos_estados(definicoes.EPISLON), x[1]) for x in proximos]
                               for estado in t[0]]
         
+        #se tiver pelo menos um ramo num estado final e com palavra vazia ACEITOU!
         return any([True for x in proximos if x[0].final and x[1] == ''])
 
     def debug_print(self) -> None:
