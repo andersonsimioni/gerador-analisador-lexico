@@ -163,6 +163,12 @@
 
                 {% if fluxo_completo.lexico.tabela_lexica %}
                 <h2 class="h5 mt-4">Tabela de Analise Lexica</h2>
+                <div class="mb-2" style="font-size:13px; color:#475569;">
+                    <span class="legend-badge" style="background:#1d4ed8;"></span> Estado inicial &nbsp;
+                    <span class="legend-badge" style="background:#16a34a;"></span> Estado final &nbsp;
+                    <span class="legend-badge" style="background:#7c3aed;"></span> Inicial e final &nbsp;
+                    <span style="color:#94a3b8;">-</span> Transicao indefinida
+                </div>
                 <div class="result-block tabela-lexica-wrapper">
                     <table class="table table-sm table-bordered tabela-lexica mb-0">
                         <thead>
@@ -262,8 +268,9 @@
 
                 {% if fluxo_completo.lexico.automata_svgs %}
                 <h2 class="h5 mt-4">Automatos</h2>
-                {% for svg in fluxo_completo.lexico.automata_svgs %}
-                <div class="result-block automaton mb-3">{{ svg | safe }}</div>
+                {% for automato in fluxo_completo.lexico.automata_svgs %}
+                <h3 class="h6 mt-3 mb-2">{{ automato.title }}</h3>
+                <div class="result-block automaton mb-3">{{ automato.svg | safe }}</div>
                 {% endfor %}
                 {% endif %}
                 {% endif %}
@@ -342,8 +349,9 @@
 
                 {% if lexico.automata_svgs %}
                 <h2 class="h5 mt-4">Automatos</h2>
-                {% for svg in lexico.automata_svgs %}
-                <div class="result-block automaton mb-3">{{ svg | safe }}</div>
+                {% for automato in lexico.automata_svgs %}
+                <h3 class="h6 mt-3 mb-2">{{ automato.title }}</h3>
+                <div class="result-block automaton mb-3">{{ automato.svg | safe }}</div>
                 {% endfor %}
                 {% endif %}
             </section>

@@ -197,7 +197,10 @@ def run_lexical_from_text(definitions, words):
     for name, regex in parsed_definitions:
         automaton = Automato.parse_regex(regex)
         lista_de_automatos.append(automaton)
-        automata_svgs.append(automaton_to_svg(automaton, name=name))
+        automata_svgs.append({
+            "title": f"Automato da definicao: {name}",
+            "svg": automaton_to_svg(automaton, name=name),
+        })
 
     tabela_lexica = None
 
@@ -205,16 +208,25 @@ def run_lexical_from_text(definitions, words):
         # União dos autômatos (AFND)
         automato_unificado = Unificador_de_automato.uniao_de_automato(lista_de_automatos)
         svg_uniao = automaton_to_svg(automato_unificado, name="União dos automatos")
-        automata_svgs.append(svg_uniao)
+        automata_svgs.append({
+            "title": "Uniao dos automatos (AFND)",
+            "svg": svg_uniao,
+        })
 
         # Determinização → AFD
         automato_determinizado = automato_unificado.determinization(automato_unificado)
         svg_afd = automaton_to_svg(automato_determinizado, name="Autômato Determinizado (AFD)")
-        automata_svgs.append(svg_afd)
+        automata_svgs.append({
+            "title": "Determinização (AFD)",
+            "svg": svg_afd,
+        })
 
         automato_determinizado.minimization()
         svg_min = automaton_to_svg(automato_determinizado, name="Autômato Minimizado")
-        automata_svgs.append(svg_min)
+        automata_svgs.append({
+            "title": "Minimizacao do AFD",
+            "svg": svg_min,
+        })
 
         # ── NOVO: Tabela de análise léxica (representação implícita do AFD minimizado) ──
         tabela_lexica = gerar_tabela_lexica(automato_determinizado)
